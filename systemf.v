@@ -1,5 +1,12 @@
 Require Import Arith.
 Require Import Bool.
+Require Import Omega.
+Require Import NPeano.
+Require Import Max.
+
+(* -------------------- I---- Defining the Type System -------------------- *)
+
+(* ---- I.2 --- Definitions ---*)
 
 (* Question 1 *)
 
@@ -312,6 +319,51 @@ induction t as [|T1|t1|k t|t Heq T2].
   + discriminate.
   + discriminate.
 Qed.
+
+
+(* ---- I.2 --- Basic Metatheory ---*)
+
+Definition kle (k1 : kind) (k2 : kind) := match (k1, k2) with
+  |(star n, star m) => n <= m
+  end.
+
+Infix "<=k" := kle (at level 80).
+
+(* Par rapport à l'énoncé, on change l'ordre de quantification
+en mettant e après T, pour que l'hypothèse d'induction soit applicable
+à tous les contextes, ce qui est important pour le cas où T est un
+type "pour tout" *)
+SearchAbout max.
+Lemma cumulativity : forall (T:typ) (e:env) (k1 k2:kind),
+  kinding e T k1 -> k1 <=k k2 -> kinding e T k2.
+Proof.
+induction T as [X|T1 IH1 T2 IH2 |k T1 IH];intro e; intros k1 k2 H0 H; destruct k1 as [q];destruct k2 as [s];
+compute in H; simpl in H0; simpl.
+- destruct H0 as [(p,[H2 H3]) H4]. 
+  split; [exists p;split; [apply H2 | omega] | apply H4].
+- destruct H0 as (p, (r, [H1 [H2 H3]])).
+  assert (p <= q) by (rewrite H3; apply (Nat.le_max_l p r)).
+  assert (r <= q) by (rewrite H3; apply (Nat.le_max_r p r)).
+  exists s,s; split;
+    [apply IH1 with (star p);[apply H1|compute;omega] | 
+    split; [apply IH2 with (star r);[apply H2|compute;omega] |];
+    symmetry; apply max_idempotent
+    ].
+- destruct k as [r]. destruct H0 as (p, [H1 H2]).
+  assert (p <= max p r) by apply (le_max_l).
+  assert (r <= max p r) by apply (le_max_r).
+  exists (s-1); split;[apply IH with (star p);[apply H1 |
+    change (p<= (s-1)); omega]|
+    assert ((max (s-1) r) = s-1) by (apply max_l;omega); omega
+    ].
+Qed.
+
+
+
+  
+ 
+  
+
   
   
     
