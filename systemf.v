@@ -167,22 +167,34 @@ Fixpoint wf_env (e:env) : bool :=
      |declare_kind k e => wf_env e
      end.
 
-Fixpoint kinding (e:env) (T:typ) (k:kind) :=
-  match (T, k) with
-    |(typ_var X, star(q)) => (exists p, (((get_kind X e) = Some(star p)) /\ (p <= q))) /\ (wf_env e = true)
-    |(typ_pourtout (star q) T1, star(r)) => exists p, ((kinding (declare_kind (star q) e) T1 (star p)) /\ (r = (max p q)+1))
-    |(typ_fleche T1 T2, star(r)) => (exists p, exists q, (kinding e T1 (star p) /\ (kinding e T2 (star q) /\ (r = (max p q)))))
-    end.
+Inductive kinding : env -> typ -> kind -> Prop :=
+  |kinding_var : forall (e:env) (X:nat) (p q : nat),
+    get_kind X e = Some (star p) -> p <= q -> (wf_env e = true) -> kinding e (typ_var X) (star q)
+  
+  |kinding_pourtout : forall (e:env) (T:typ) (X:nat) (p q:nat),
+    kinding (declare_kind (star q) e) T (star p) -> kinding e (typ_pourtout (star q) T) (star (max p q + 1))
+    
+  |kinding_fleche : forall (e:env) (T1 T2:typ) (p q:nat),
+    kinding e T1 (star p) -> kinding e T2 (star q) -> kinding e (typ_fleche T1 T2) (star (max p q)).
 
-Fixpoint typing (e:env) (t:term) (T:typ) :=
-  match (t, T) with
-    |(term_var x, T) => ((get_type x e) = Some(T)) /\ (wf_env e = true)
-    |(term_small_lambda T1 t1, typ_fleche T3 T2) => (T3=T1) /\ typing (declare_typ T1 e) t1 T2
-    |(term_app_term t1 t2, T2) => exists T1, ((typing e t1 (typ_fleche T1 T2)) /\ (typing e t2 T1))
-    |(term_big_lambda (star p) t1, typ_pourtout (star q) T1) => (p=q) /\ typing (declare_kind (star p) e) t1 T1
-    |(term_app_typ t1 T2, T3) => exists k, exists T1, (kinding e T2 k) /\ typing e t1 (typ_pourtout k T1) /\ (T3 = tsubst 0 T2 T1)
-    |_ => False
-    end.
+
+Inductive typing : env -> term -> typ -> Prop :=
+  |typing_var : forall (e:env) (x:nat) (T:typ),
+    get_type x e = Some T -> (wf_env e = true) -> typing e (term_var x) T
+
+  |typing_small_lambda : forall (e:env) (t:term) (T1 T2: typ),
+    typing (declare_typ T1 e) t T2 -> typing e (term_small_lambda T1 t) (typ_fleche T1 T2)
+
+  |typing_app_term : forall (e:env) (t1 t2 :term) (T1 T2 T1T2:typ),
+    typing e t1 (typ_fleche T1 T2) -> typing e t2 T1 -> typing e (term_app_term t1 t2) T2
+
+  |typing_big_lambda : forall (e:env) (t: term) (T: typ) (p:nat),
+    typing (declare_kind (star p) e) t T -> typing e (term_big_lambda (star p) t) (typ_pourtout (star p) T)
+
+  |typing_app_typ : forall (e:env) (t:term) (T1 T2:typ) (l:nat),
+    typing e t (typ_pourtout (star l) T1) -> kinding e T2 (star l) -> typing e (term_app_typ t T2) (tsubst 0 T2 T1).
+
+(* Remarque : chacune des règles conserve les indices de Bruijn : on n'a pas besoin de faire des décalages *)
 
 (* Question 5 *)
 
