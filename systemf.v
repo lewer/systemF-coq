@@ -171,7 +171,7 @@ Inductive kinding : env -> typ -> kind -> Prop :=
   |kinding_var : forall (e:env) (X:nat) (p q : nat),
     get_kind X e = Some (star p) -> p <= q -> (wf_env e = true) -> kinding e (typ_var X) (star q)
   
-  |kinding_pourtout : forall (e:env) (T:typ) (X:nat) (p q:nat),
+  |kinding_pourtout : forall (e:env) (T:typ) (p q:nat),
     kinding (declare_kind (star q) e) T (star p) -> kinding e (typ_pourtout (star q) T) (star (max p q + 1))
     
   |kinding_fleche : forall (e:env) (T1 T2:typ) (p q:nat),
@@ -209,7 +209,6 @@ Lemma typ_eq_dec : forall (T U :typ), {T=U} + {T<>U}.
 Proof.
 decide equality; decide equality; decide equality.
 Qed.
-
 
 
 Fixpoint infer_kind (e:env) (T:typ) :=
@@ -252,7 +251,7 @@ Fixpoint infer_type (e:env) (t:term) :=
   end.
 
 
-Lemma kinference_correct : forall (T:typ) (e:env), 
+(* Lemma kinference_correct : forall (T:typ) (e:env), 
   forall r, infer_kind e T = Some (star r) -> kinding e T (star r).
 induction T.
 - intros e r infer. simpl. inversion infer. 
@@ -279,7 +278,21 @@ induction T.
   + exists n. split. trivial. congruence.
   + discriminate H0.
 Qed.
-    
+*)
+
+Lemma kinference_correct : forall (T:typ) (e:env), 
+  forall r, infer_kind e T = Some (star r) -> kinding e T (star r).
+Proof.
+induction T as [q|T1 IH1 T2 IH2| k T];intros e r infer; inversion infer as [H].
+- remember (wf_env e) as wf eqn:Hwf.
+  destruct (wf);[apply (kinding_var) with r;[apply H|omega|symmetry;apply Hwf]|discriminate].
+- remember (infer_kind e T1) as infT1 eqn:Hinft1; remember (infer_kind e T2) as infT2 eqn:Hinft2.
+  destruct infT1 as [k1|];[destruct k1 as [n]; destruct infT2 as [k2|];[destruct k2 as [m]|discriminate] |discriminate].
+  injection H; intro H1; rewrite <- H1.
+  apply (kinding_fleche);[apply IH1;symmetry; apply Hinft1 | apply IH2; symmetry; apply Hinft2].
+- destruct k. remember (infer_kind (declare_kind (star n) e) T) as infT eqn:Hint. destruct infT as [l|];[|discriminate];destruct l as [m].
+  injection H; intro H1; rewrite <- H1; apply kinding_pourtout; apply IHT; symmetry; apply Hint.
+Qed.
   
 Lemma tinference_correct : forall (t:term) (e:env) (T:typ), 
   infer_type e t = Some (T) -> typing e t T.
