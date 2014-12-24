@@ -35,7 +35,7 @@ Fixpoint tsubst (X:nat) (U:typ) (T:typ) :=
       |inright(_) => T
       end
     |typ_fleche T1 T2 => typ_fleche (tsubst X U T1) (tsubst X U T2)
-    |typ_pourtout Y T1 => typ_pourtout Y (tsubst (X-1) (typ_shift_in_type U) T1)
+    |typ_pourtout Y T1 => typ_pourtout Y (tsubst (X+1) (typ_shift_in_type U) T1)
   end.
 
 
@@ -309,14 +309,7 @@ induction t as [n|T1 t|t1 IH1 t2 IH2|p t|t IH T2]; intro e.
      apply kinference_correct; symmetry; rewrite l'eql; apply HinfT2].
 Qed.
 
-
 (* ---- I.2 --- Basic Metatheory ---*)
-
-Definition kle (k1 : kind) (k2 : kind) := match (k1, k2) with
-  |(star n, star m) => n <= m
-  end.
-
-Infix "<=k" := kle (at level 80).
 
 (* Par rapport à l'énoncé, on change l'ordre de quantification
 en mettant e après T, pour que l'hypothèse d'induction soit applicable
@@ -324,28 +317,32 @@ en mettant e après T, pour que l'hypothèse d'induction soit applicable
 type "pour tout" *)
 SearchAbout max.
 Lemma cumulativity : forall (T:typ) (e:env) (k1 k2:kind),
-  kinding e T k1 -> k1 <=k k2 -> kinding e T k2.
+  kinding e T k1 -> k1 <= k2 -> kinding e T k2.
 Proof.
-induction T as [X|T1 IH1 T2 IH2 |k T1 IH];intro e; intros k1 k2 H0 H; destruct k1 as [q];destruct k2 as [s];
-compute in H; simpl in H0; simpl.
-- destruct H0 as [(p,[H2 H3]) H4]. 
-  split; [exists p;split; [apply H2 | omega] | apply H4].
-- destruct H0 as (p, (r, [H1 [H2 H3]])).
-  assert (p <= q) by (rewrite H3; apply (Nat.le_max_l p r)).
-  assert (r <= q) by (rewrite H3; apply (Nat.le_max_r p r)).
-  exists s,s; split;
-    [apply IH1 with (star p);[apply H1|compute;omega] | 
-    split; [apply IH2 with (star r);[apply H2|compute;omega] |];
-    symmetry; apply max_idempotent
-    ].
-- destruct k as [r]. destruct H0 as (p, [H1 H2]).
-  assert (p <= max p r) by apply (le_max_l).
-  assert (r <= max p r) by apply (le_max_r).
-  exists (s-1); split;[apply IH with (star p);[apply H1 |
-    change (p<= (s-1)); omega]|
-    assert ((max (s-1) r) = s-1) by (apply max_l;omega); omega
-    ].
+induction T as [X|T1 IH1 T2 IH2 |l T1 IH];intro e; intros q s H0 H; simpl.
+- inversion H0; apply kinding_var with p; trivial; omega.
+
+- inversion H0 as [| |e' T1' T2' p r H1 H2 H3 H4 H5].
+  assert (max s s = s) as Hs by apply (max_idempotent); rewrite <-Hs.
+  assert (p <= q) by (rewrite <- H5; apply (Nat.le_max_l p r)).
+  assert (r <= q) by (rewrite <- H5; apply (Nat.le_max_r p r)).
+  apply kinding_fleche;
+    [apply IH1 with p; [apply H2 | omega] | 
+    apply IH2 with r; [apply H6 | omega]].
+  
+- inversion H0 as [| e' T p l'|].
+  assert (p <= max p l) by apply (le_max_l).
+  assert (l <= max p l) by apply (le_max_r).
+  assert (p <= s-1) by omega; assert (l <= s-1) by omega.
+  (* comment on démontre max (s-1) l + 1 = s en une seule étape, sans
+  tous ces assert moches ? *)
+  assert (max (s-1) l = s-1) by now (apply max_l). assert (s >= 1) by omega;
+  assert (max (s-1) l + 1 = s) by omega.
+  rewrite <- H12.
+  apply kinding_pourtout.
+  apply IH with p; [apply H5 | omega].
 Qed.
+  
 
 
 
