@@ -257,56 +257,56 @@ Fixpoint infer_type (e:env) (t:term) :=
 Lemma kinference_correct : forall (T:typ) (e:env), 
   forall r, infer_kind e T = Some r -> kinding e T r.
 Proof.
-induction T as [q|T1 IH1 T2 IH2| k T];intros e r infer; inversion infer as [H].
-- remember (wf_env e) as wf eqn:Hwf.
-  destruct (wf);[apply (kinding_var) with r;[apply H|omega|symmetry;apply Hwf]|discriminate].
+induction T as [q|T1 IH1 T2 IH2| k T];intros e r infer; simpl in infer.
+- remember (wf_env e) as wf eqn:Hwf. 
+  destruct (wf);[apply (kinding_var) with r;[apply infer|omega|symmetry;apply Hwf]|discriminate].
 - remember (infer_kind e T1) as infT1 eqn:Hinft1; remember (infer_kind e T2) as infT2 eqn:Hinft2.
   destruct infT1 as [k1|];[destruct infT2 as [k2|];[|discriminate] |discriminate].
-  injection H; intro H1; rewrite <- H1.
+  injection infer; intro H1; rewrite <- H1.
   apply (kinding_fleche);[apply IH1;symmetry; apply Hinft1 | apply IH2; symmetry; apply Hinft2].
 - remember (infer_kind (ConsK k e) T) as infT eqn:Hint. destruct infT as [l|];[|discriminate].
-  injection H; intro H1; rewrite <- H1; apply kinding_pourtout; apply IHT; symmetry; apply Hint.
+  injection infer; intro H1; rewrite <- H1; apply kinding_pourtout; apply IHT; symmetry; apply Hint.
 Qed.
 
 Lemma tinference_correct : forall (t:term) (e:env) (T:typ), 
   infer_type e t = Some (T) -> typing e t T.
 Proof.
 induction t as [n|T1 t|t1 IH1 t2 IH2|p t|t IH T2]; intro e.
-- intros T infer. inversion infer as [H].
+- intros T infer. simpl in infer.
   remember (wf_env e) as wf eqn:Hwf.
   destruct wf;[apply typing_var;
-    [apply H |
+    [apply infer |
     symmetry; apply Hwf] |
     discriminate].
 
-- intros T1T2 infer; inversion infer as [H].
+- intros T1T2 infer; simpl in infer.
   remember (infer_type (ConsT T1 e) t) as T2 eqn:Hinft; destruct T2 as [T2|];[|discriminate].
-  injection H; intro H1; rewrite <- H1.
+  injection infer; intro H1; rewrite <- H1.
   apply typing_small_lambda;
     apply IHt; symmetry; assumption.
 
-- intros T2 infer. inversion infer as [H].
+- intros T2 infer. simpl in infer.
   remember (infer_type e t1) as T1T2 eqn:Hinft1; remember (infer_type e t2) as T1 eqn:Hinft2.
   destruct T1T2 as [T1T2|];[|discriminate]. destruct T1T2 as [ |T1' T2'| ]; [discriminate| |discriminate].
   destruct T1 as [T1|];[|discriminate].
   remember (typ_eq_dec T1' T1) as eq_dec; destruct eq_dec as [T1eqT1'|]; [|discriminate].
-  injection H; intro H1; rewrite <- H1.
+  injection infer; intro H1; rewrite <- H1.
   apply typing_app_term with T1';
     [apply IH1; symmetry; apply Hinft1 |
     apply IH2; symmetry; rewrite T1eqT1'; apply Hinft2].
 
-- intros allpT infer; inversion infer as [H].
+- intros allpT infer; simpl in infer.
   remember (infer_type (ConsK p e) t) as T; destruct T as [T|]; [|discriminate].
-  injection H; intro H1; rewrite <- H1.
+  injection infer; intro H1; rewrite <- H1.
   apply typing_big_lambda;
     apply IHt; symmetry; apply HeqT.
 
-- intros T3 infer; inversion infer as [H].
+- intros T3 infer; simpl in infer.
   remember (infer_type e t) as all_lT1 eqn:Hinft; remember (infer_kind e T2) as l eqn:HinfT2.
   destruct all_lT1 as [all_lT1|]; [|discriminate]; destruct all_lT1 as [ | | l' T1]; [discriminate | discriminate |].
   destruct l as [l|]; [|discriminate].
   remember (kind_eq_dec l' l) as eq_dec; destruct eq_dec as [l'eql|];[|discriminate].
-  injection H; intro H1; rewrite <- H1.
+  injection infer; intro H1; rewrite <- H1.
   apply typing_app_typ with l';
     [apply IH; symmetry; apply Hinft | 
      apply kinference_correct; symmetry; rewrite l'eql; apply HinfT2].
@@ -345,16 +345,3 @@ induction T as [X|T1 IH1 T2 IH2 |l T1 IH];intro e; intros q s H0 H; simpl.
   apply kinding_pourtout.
   apply IH with p; [apply H5 | omega].
 Qed.
-  
-
-
-
-  
- 
-  
-
-  
-  
-    
-      
-    
