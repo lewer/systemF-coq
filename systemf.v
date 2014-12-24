@@ -13,113 +13,116 @@ Require Import Max.
 Definition kind := nat.
 
 Inductive typ : Type := 
-  |typ_var : nat -> typ
-  |typ_fleche : typ -> typ -> typ
-  |typ_pourtout : kind -> typ -> typ.
+  |TyVar : nat -> typ
+  |Arrow : typ -> typ -> typ
+  |FAll : kind -> typ -> typ.
 
-(* Décale vers la droite les variables libres dans un type.
-i.e : typ_var(n) => typ_var(n+1) *)
-Fixpoint typ_shift_in_type T:typ :=
+(* c=cut, d=nb de fois à décaler *)
+Fixpoint ty_shift_ty_aux (c:nat) (d:nat) (T:typ) :=
   match T with
-    |typ_var n => typ_var (n+1)
-    |typ_fleche T1 T2 => typ_fleche (typ_shift_in_type T1) (typ_shift_in_type T2)
-    |typ_pourtout X T1 => typ_pourtout X (typ_shift_in_type T1)
-    end.
+    | TyVar X => if le_dec c X then TyVar (X+d) else T
+    | Arrow T1 T2 => Arrow (ty_shift_ty_aux c d T1) (ty_shift_ty_aux c d T2)
+    | FAll K T => FAll K (ty_shift_ty_aux (S c) d T)
+  end.
+
+Definition ty_shift_ty := ty_shift_ty_aux 0 1.
 
 (* substitution de X par U dans T *)
 Fixpoint tsubst (X:nat) (U:typ) (T:typ) :=
   match T with
-    |typ_var m => match lt_eq_lt_dec X m with (* X<m \/ X=m \/ X>m *)
-      |inleft(left _) => T 
-      |inleft(right _) => U
-      |inright(_) => T
-      end
-    |typ_fleche T1 T2 => typ_fleche (tsubst X U T1) (tsubst X U T2)
-    |typ_pourtout Y T1 => typ_pourtout Y (tsubst (X+1) (typ_shift_in_type U) T1)
+    |TyVar m => if (eq_nat_dec X m) then U else T 
+    |Arrow T1 T2 => Arrow (tsubst X U T1) (tsubst X U T2)
+    |FAll Y T1 => FAll Y (tsubst (X+1) (ty_shift_ty U) T1)
   end.
 
 
 (* Question 2 *)
 
 Inductive term : Set :=
-  |term_var : nat -> term
-  |term_small_lambda : typ -> term -> term
-  |term_app_term : term -> term -> term
-  |term_big_lambda : kind -> term -> term
-  |term_app_typ : term -> typ -> term.
+  |Var : nat -> term
+  |Lam : typ -> term -> term
+  |App : term -> term -> term
+  |Abs : kind -> term -> term
+  |AppT : term -> typ -> term.
 
 (* Décale vers la droite les variables libres de type dans un terme.
-i.e : typ_var(n) => typ_var(n+1) *)
-Fixpoint typ_shift_in_term t:term :=
+i.e : TyVar(n) => TyVar(n+1) *)
+(* c=cut, d=nb de fois à décaler *)
+Fixpoint ty_shift_t_aux (c:nat) (d:nat) t:term :=
   match t with
-    |term_var _ => t
-    |term_small_lambda T t1 => term_small_lambda T (typ_shift_in_term t1)
-    |term_app_term t1 t2 => term_app_term (typ_shift_in_term t1) (typ_shift_in_term t2)
-    |term_big_lambda k t1 => term_big_lambda k (typ_shift_in_term t1)
-    |term_app_typ t1 T => term_app_typ (typ_shift_in_term t1) (typ_shift_in_type T)
+    |Var _ => t
+    |Lam T t1 => Lam T (ty_shift_t_aux (c+1) d t1)
+    |App t1 t2 => App (ty_shift_t_aux c d t1) (ty_shift_t_aux c d t2)
+    |Abs k t1 => Abs k (ty_shift_t_aux (c+1) d t1)
+    |AppT t1 T => AppT (ty_shift_t_aux c d t1) (ty_shift_ty_aux c d T)
     end.
 
+Definition ty_shift_t := ty_shift_t_aux 0 1.
+
 (* Décale vers la droite les variables libres de terme dans un terme.
-i.e : term_var(n) => term_var(n+1) *)
-Fixpoint term_shift_in_term t:term :=
+i.e : Var(n) => Var(n+1) *)
+(* c=cut, d=nb de fois à décaler *)
+Fixpoint t_shift_t_aux (c:nat) (d:nat) t:term :=
   match t with
-    |term_var n => term_var (n+1)
-    |term_small_lambda T t1 => term_small_lambda T (term_shift_in_term t1)
-    |term_app_term t1 t2 => term_app_term (term_shift_in_term t1) (term_shift_in_term t2)
-    |term_big_lambda k t1 => term_big_lambda k (term_shift_in_term t1)
-    |term_app_typ t1 T => term_app_typ (term_shift_in_term t1) T
+    |Var x => if le_dec c x then Var (x+d) else Var x 
+    |Lam T t1 => Lam T (t_shift_t_aux (c+1) d t1)
+    |App t1 t2 => App (t_shift_t_aux c d t1) (t_shift_t_aux c d t1)
+    |Abs k t1 => Abs k (t_shift_t_aux (c+1) d t1)
+    |AppT t1 T => AppT (t_shift_t_aux c d t1) T
     end.
+
+Definition t_shift_t := t_shift_t_aux 0 1.
 
 Fixpoint subst_typ (X:nat) (U:typ) (t:term) :=
   match t with
-    |term_var _ => t
-    |term_small_lambda T t1 => term_small_lambda T (subst_typ (X-1) (typ_shift_in_type U) t1)
-    |term_app_term t1 t2 => term_app_term (subst_typ X U t1) (subst_typ X U t2)
-    |term_big_lambda k t1 => term_big_lambda k (subst_typ (X-1) (typ_shift_in_type U) t1)
-    |term_app_typ t1 T => term_app_typ (subst_typ X U t1) (tsubst X U T)
+    |Var _ => t
+    |Lam T t1 => Lam T (subst_typ (X-1) (typ_shift_in_type U) t1)
+    |App t1 t2 => App (subst_typ X U t1) (subst_typ X U t2)
+    |Abs k t1 => Abs k (subst_typ (X-1) (typ_shift_in_type U) t1)
+    |AppT t1 T => AppT (subst_typ X U t1) (tsubst X U T)
     end.
 
 (* Substitution de x libre par t1 dans t2 *)
 Fixpoint subst (x:nat) (t1:term) (t2:term) :=
   match t2 with
-    |term_var m => match lt_eq_lt_dec x m with (* x<m \/ x=m \/ x>m *)
+    |Var m => match lt_eq_lt_dec x m with (* x<m \/ x=m \/ x>m *)
       |inleft(left _) => t2
       |inleft(right _) => t1
       |inright(_) => t2
       end
-    |term_small_lambda T t3 => term_small_lambda T (subst (x-1) (term_shift_in_term t1) t3)
-    |term_app_term t3 t4 => term_app_term (subst x t1 t3) (subst x t1 t4)
-    |term_big_lambda k t3 => term_big_lambda k (subst (x-1) (term_shift_in_term t1) t3)
-    |term_app_typ t3 T => term_app_typ (subst x t1 t3) T
+    |Lam T t3 => Lam T (subst (x-1) (term_shift_in_term t1) t3)
+    |App t3 t4 => App (subst x t1 t3) (subst x t1 t4)
+    |Abs k t3 => Abs k (subst (x-1) (term_shift_in_term t1) t3)
+    |AppT t3 T => AppT (subst x t1 t3) T
     end.
 
 (* Question 3 *)
 
 Inductive env : Set :=
-  |env_empty : env
-  |declare_kind : kind -> env -> env
-  |declare_typ : typ -> env -> env.
+  |Nil: env
+  |ConsK : kind -> env -> env
+  |ConsT : typ -> env -> env.
 
 (*Soit e un environnement et X une variable de type, la fonction qui suit renvoie le kind e(X) 
  si défini, None sinon *)
 Fixpoint get_kind (X:nat) (e:env) :=
   match (e, X) with 
-    |(env_empty, _) => None
-    |(declare_kind T e1, 0) => Some T
-    |(declare_kind T e1, S n) => get_kind n e1
-    |(declare_typ t e1, 0) => None
-    |(declare_typ t e1, S n) => get_kind n e1
+    |(Nil, _) => None
+    |(ConsK T e1, 0) => Some T
+    |(ConsK T e1, S n) => get_kind n e1
+    |(ConsT t e1, 0) => None
+    |(ConsT t e1, S n) => get_kind n e1
     end.
 
 (*Soit e un environnement et X une variable de terme, la fonction qui suit
  renvoie e(x) si défini, None sinon *)
 Fixpoint get_type (x:nat) (e:env) :=
   match (e, x) with 
-    |(env_empty,_) => None
-    |(declare_kind T e1, 0) => None
-    |(declare_kind T e1, S n) => get_type n e1
-    |(declare_typ t e1, 0) => Some t
-    |(declare_typ t e1, S n) => get_type n e1
+    |(Nil,_) => None
+    |(ConsK T e1, 0) => None
+    |(ConsK T e1, S n) => get_type n e1
+    |(ConsT t e1, 0) => Some t
+    |(ConsT t e1, S n) => get_type n e1
     end.
 
 (* Question 4 *)
@@ -127,72 +130,72 @@ Fixpoint get_type (x:nat) (e:env) :=
 (*
 Fixpoint wf_env (e:env) :=
   match e with
-    |env_empty => True
-    |declare_kind k e1 => wf_env e1
-    |declare_typ T e1 => (wf_env e1) /\ (exists p, (kinding e1 T (star p) ))
+    |Nil=> True
+    |ConsK k e1 => wf_env e1
+    |ConsT T e1 => (wf_env e1) /\ (exists p, (kinding e1 T (star p) ))
     end
 
 with kinding (e:env) (T:typ) (k:kind) :=
   match (T, k) with
-    |(typ_var X, star(q)) => (exists p, (((get_kind X e) = Some(star p)) /\ (p <= q))) /\ wf_env e
-    |(typ_pourtout (star q) T1, star(r)) => exists p, ((kinding (declare_kind (star q) e) T1 (star p)) /\ (r = (max p q)+1))
-    |(typ_fleche T1 T2, star(r)) => (exists p, exists q, (kinding e T1 (star p) /\ (kinding e T2 (star q) /\ (r = (max p q)))))
+    |(TyVar X, star(q)) => (exists p, (((get_kind X e) = Some(star p)) /\ (p <= q))) /\ wf_env e
+    |(FAll (star q) T1, star(r)) => exists p, ((kinding (ConsK (star q) e) T1 (star p)) /\ (r = (max p q)+1))
+    |(Arrow T1 T2, star(r)) => (exists p, exists q, (kinding e T1 (star p) /\ (kinding e T2 (star q) /\ (r = (max p q)))))
     end.
 
 Fixpoint typing (e:env) (t:term) (T:typ) :=
   match (t, T) with
-    |(term_var x, T) => ((get_type x e) = Some(T)) /\ wf_env e
-    |(term_small_lambda T1 t1, typ_fleche T3 T2) => (T3=T1) /\ typing (declare_typ T1 e) t1 T2
-    |(term_app_term t1 t2, T2) => exists T1, ((typing e t1 (typ_fleche T1 T2)) /\ (typing e t2 T1))
-    |(term_big_lambda (star p) t1, typ_pourtout (star q) T1) => (p=q) /\ typing (declare_kind (star p) e) t T1
-    |(term_app_typ t1 T2, T3) => exists l, exists T1, (kinding e T2 (star l)) /\ typing e t1 (typ_pourtout (star l) T1) /\ (exists X, T3 = tsubst X T2 T1)
+    |(Var x, T) => ((get_type x e) = Some(T)) /\ wf_env e
+    |(Lam T1 t1, Arrow T3 T2) => (T3=T1) /\ typing (ConsT T1 e) t1 T2
+    |(App t1 t2, T2) => exists T1, ((typing e t1 (Arrow T1 T2)) /\ (typing e t2 T1))
+    |(Abs (star p) t1, FAll (star q) T1) => (p=q) /\ typing (ConsK (star p) e) t T1
+    |(AppT t1 T2, T3) => exists l, exists T1, (kinding e T2 (star l)) /\ typing e t1 (FAll (star l) T1) /\ (exists X, T3 = tsubst X T2 T1)
     |_ => False
     end.
 *)
 
 Fixpoint wf_typ (e:env) (T:typ) : bool :=
   match T with
-    |typ_var X => match get_kind X e with
+    |TyVar X => match get_kind X e with
       |None => false
       |_ => true
       end
-    |typ_fleche T1 T2 => wf_typ e T1 && wf_typ e T2
-    |typ_pourtout k T2 => wf_typ (declare_kind k e) T2
+    |Arrow T1 T2 => wf_typ e T1 && wf_typ e T2
+    |FAll k T2 => wf_typ (ConsK k e) T2
     end.
 
 Fixpoint wf_env (e:env) : bool :=
    match e with
-     |env_empty => true
-     |declare_typ T e => wf_typ e T && wf_env e
-     |declare_kind k e => wf_env e
+     |Nil=> true
+     |ConsT T e => wf_typ e T && wf_env e
+     |ConsK k e => wf_env e
      end.
 
 Inductive kinding : env -> typ -> kind -> Prop :=
   |kinding_var : forall (e:env) (X:nat) (p q : nat),
-    get_kind X e = Some p -> p <= q -> (wf_env e = true) -> kinding e (typ_var X) q
+    get_kind X e = Some p -> p <= q -> (wf_env e = true) -> kinding e (TyVar X) q
   
   |kinding_pourtout : forall (e:env) (T:typ) (p q:nat),
-    kinding (declare_kind q e) T p -> kinding e (typ_pourtout q T) (max p q + 1)
+    kinding (ConsK q e) T p -> kinding e (FAll q T) (max p q + 1)
     
   |kinding_fleche : forall (e:env) (T1 T2:typ) (p q:nat),
-    kinding e T1 p -> kinding e T2 q -> kinding e (typ_fleche T1 T2) (max p q).
+    kinding e T1 p -> kinding e T2 q -> kinding e (Arrow T1 T2) (max p q).
 
 
 Inductive typing : env -> term -> typ -> Prop :=
   |typing_var : forall (e:env) (x:nat) (T:typ),
-    get_type x e = Some T -> (wf_env e = true) -> typing e (term_var x) T
+    get_type x e = Some T -> (wf_env e = true) -> typing e (Var x) T
 
   |typing_small_lambda : forall (e:env) (t:term) (T1 T2: typ),
-    typing (declare_typ T1 e) t T2 -> typing e (term_small_lambda T1 t) (typ_fleche T1 T2)
+    typing (ConsT T1 e) t T2 -> typing e (Lam T1 t) (Arrow T1 T2)
 
   |typing_app_term : forall (e:env) (t1 t2 :term) (T1 T2 :typ),
-    typing e t1 (typ_fleche T1 T2) -> typing e t2 T1 -> typing e (term_app_term t1 t2) T2
+    typing e t1 (Arrow T1 T2) -> typing e t2 T1 -> typing e (App t1 t2) T2
 
   |typing_big_lambda : forall (e:env) (t: term) (T: typ) (p:nat),
-    typing (declare_kind p e) t T -> typing e (term_big_lambda p t) (typ_pourtout p T)
+    typing (ConsK p e) t T -> typing e (Abs p t) (FAll p T)
 
   |typing_app_typ : forall (e:env) (t:term) (T1 T2:typ) (l:nat),
-    typing e t (typ_pourtout l T1) -> kinding e T2 l -> typing e (term_app_typ t T2) (tsubst 0 T2 T1).
+    typing e t (FAll l T1) -> kinding e T2 l -> typing e (AppT t T2) (tsubst 0 T2 T1).
 
 (* Remarque : chacune des règles conserve les indices de Bruijn : on n'a pas besoin de faire des décalages *)
 
@@ -213,12 +216,12 @@ Qed.
 
 Fixpoint infer_kind (e:env) (T:typ) :=
   match T with
-    |typ_var X => if wf_env e then get_kind X e else None
-    |typ_pourtout q T1 => match infer_kind (declare_kind q e) T1 with 
+    |TyVar X => if wf_env e then get_kind X e else None
+    |FAll q T1 => match infer_kind (ConsK q e) T1 with 
           |None => None 
           |Some p => Some (max p q + 1)
           end
-    |typ_fleche T1 T2 => match (infer_kind e T1, infer_kind e T2) with
+    |Arrow T1 T2 => match (infer_kind e T1, infer_kind e T2) with
           |(Some p, Some q) => Some (max p q)
           |_ => None
           end
@@ -226,24 +229,24 @@ Fixpoint infer_kind (e:env) (T:typ) :=
 
 Fixpoint infer_type (e:env) (t:term) :=
   match t with
-   |term_var x => if wf_env e then get_type x e else None
-   |term_small_lambda T t1 => match infer_type (declare_typ T e) t1 with
-     |Some(U) => Some (typ_fleche T U)
+   |Var x => if wf_env e then get_type x e else None
+   |Lam T t1 => match infer_type (ConsT T e) t1 with
+     |Some(U) => Some (Arrow T U)
      |None => None
      end
-   |term_app_term t1 t2 => match (infer_type e t1, infer_type e t2) with
-     |(Some (typ_fleche T1 T2), Some T3) => match typ_eq_dec T1 T3 with
+   |App t1 t2 => match (infer_type e t1, infer_type e t2) with
+     |(Some (Arrow T1 T2), Some T3) => match typ_eq_dec T1 T3 with
        | left(_) => Some T2 (* T1 = T3 *)
        |_ => None
        end
      |_ => None
      end
-   |term_big_lambda k t1 => match infer_type (declare_kind k e) t1 with
-     |Some T => Some (typ_pourtout k T)
+   |Abs k t1 => match infer_type (ConsK k e) t1 with
+     |Some T => Some (FAll k T)
      |_ => None
      end
-   |term_app_typ t1 T2 => match (infer_type e t1, infer_kind e T2) with
-     |(Some (typ_pourtout k1 T1), Some (k2)) => match kind_eq_dec k1 k2 with
+   |AppT t1 T2 => match (infer_type e t1, infer_kind e T2) with
+     |(Some (FAll k1 T1), Some (k2)) => match kind_eq_dec k1 k2 with
        |left(_) => Some (tsubst 0 T2 T1) (* k1 = k2 *)
        |_ => None end
      |_ => None
@@ -261,7 +264,7 @@ induction T as [q|T1 IH1 T2 IH2| k T];intros e r infer; inversion infer as [H].
   destruct infT1 as [k1|];[destruct infT2 as [k2|];[|discriminate] |discriminate].
   injection H; intro H1; rewrite <- H1.
   apply (kinding_fleche);[apply IH1;symmetry; apply Hinft1 | apply IH2; symmetry; apply Hinft2].
-- remember (infer_kind (declare_kind k e) T) as infT eqn:Hint. destruct infT as [l|];[|discriminate].
+- remember (infer_kind (ConsK k e) T) as infT eqn:Hint. destruct infT as [l|];[|discriminate].
   injection H; intro H1; rewrite <- H1; apply kinding_pourtout; apply IHT; symmetry; apply Hint.
 Qed.
 
@@ -277,7 +280,7 @@ induction t as [n|T1 t|t1 IH1 t2 IH2|p t|t IH T2]; intro e.
     discriminate].
 
 - intros T1T2 infer; inversion infer as [H].
-  remember (infer_type (declare_typ T1 e) t) as T2 eqn:Hinft; destruct T2 as [T2|];[|discriminate].
+  remember (infer_type (ConsT T1 e) t) as T2 eqn:Hinft; destruct T2 as [T2|];[|discriminate].
   injection H; intro H1; rewrite <- H1.
   apply typing_small_lambda;
     apply IHt; symmetry; assumption.
@@ -293,7 +296,7 @@ induction t as [n|T1 t|t1 IH1 t2 IH2|p t|t IH T2]; intro e.
     apply IH2; symmetry; rewrite T1eqT1'; apply Hinft2].
 
 - intros allpT infer; inversion infer as [H].
-  remember (infer_type (declare_kind p e) t) as T; destruct T as [T|]; [|discriminate].
+  remember (infer_type (ConsK p e) t) as T; destruct T as [T|]; [|discriminate].
   injection H; intro H1; rewrite <- H1.
   apply typing_big_lambda;
     apply IHt; symmetry; apply HeqT.
