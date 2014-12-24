@@ -27,7 +27,7 @@ Inductive env :=
   | ConsT : typ -> env -> env.
 
 
-Fixpoint get_kind (X : var) (e : env) :=
+Fixpoint get_kind (X:var) (e:env) :=
   match (X, e) with
     | (0, ConsK K _) => Some K
     | (S X, ConsK _ e) => get_kind X e
@@ -35,7 +35,7 @@ Fixpoint get_kind (X : var) (e : env) :=
     | _ => None
   end.
 
-Fixpoint get_type (x : var) (e : env) :=
+Fixpoint get_type (x:var) (e:env) :=
   match (x, e) with
     | (0, ConsT T _) => Some T
     | (S x, ConsK _ e) => get_type x e
@@ -46,8 +46,8 @@ Fixpoint get_type (x : var) (e : env) :=
 
 Inductive wf : env -> Prop :=
   | WfNil : wf Nil
-  | WfConK : forall K e, wf e -> wf (ConsK K e)
-  | WfConT : forall T e, forall K, kinding e T K -> wf e -> wf (ConsT T e)
+  | WfConsK : forall K e, wf e -> wf (ConsK K e)
+  | WfConsT : forall T e, forall K, kinding e T K -> wf e -> wf (ConsT T e)
 
 with kinding : env -> typ -> kind -> Prop :=
   | KVar : forall e X p q, wf e -> get_kind X e = Some p -> (p <= q) -> kinding e (TyVar X) q
@@ -86,3 +86,35 @@ Proof.
   intros e T K H. induction H; try assumption.
   inversion IHkinding. assumption.
 Qed.
+
+
+(* Question 1.5 - Inférence *)
+Fixpoint infer_kind (e:env) (T:typ) :=
+  match T with
+    | TyVar X => get_kind X e
+    | Arrow T1 T2 => match (infer_kind e T1, infer_kind e T2) with
+                       | (Some p, Some q) => Some (max p q)
+                       | _ => None
+                     end
+    | FAll q T => match infer_kind (ConsK q e) T with 
+                    | Some p => Some (S (max q p))
+                    | _ => None
+                  end
+  end.
+
+
+Lemma kind_infer_correct : forall T e K,
+  wf e -> infer_kind e T = Some K -> kinding e T K .
+Proof.
+  induction T.
+  + intros e K Hwf H. simpl in H. eapply KVar. assumption. eassumption. reflexivity.
+  + intros e K Hwf H. simpl in H.
+    remember (infer_kind e T1) as opt1. destruct opt1.
+    remember (infer_kind e T2) as opt2. destruct opt2.
+    inversion H. apply KArrow.
+    apply IHT1. assumption. now symmetry.
+    apply IHT2. assumption. now symmetry.
+    discriminate H. discriminate.
+  + intros e K Hwf H. simpl in H.
+    remember (infer_kind (ConsK k e) T) as opt. destruct opt; [|discriminate].
+    inversion H. apply KFAll. apply IHT. apply WfConsK. assumption.
