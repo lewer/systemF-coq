@@ -10,7 +10,7 @@ Require Import Max.
 
 (* Question 1 *)
 
-Inductive kind : Set := star : nat -> kind.
+Definition kind := nat.
 
 Inductive typ : Type := 
   |typ_var : nat -> typ
@@ -169,13 +169,13 @@ Fixpoint wf_env (e:env) : bool :=
 
 Inductive kinding : env -> typ -> kind -> Prop :=
   |kinding_var : forall (e:env) (X:nat) (p q : nat),
-    get_kind X e = Some (star p) -> p <= q -> (wf_env e = true) -> kinding e (typ_var X) (star q)
+    get_kind X e = Some p -> p <= q -> (wf_env e = true) -> kinding e (typ_var X) q
   
   |kinding_pourtout : forall (e:env) (T:typ) (p q:nat),
-    kinding (declare_kind (star q) e) T (star p) -> kinding e (typ_pourtout (star q) T) (star (max p q + 1))
+    kinding (declare_kind q e) T p -> kinding e (typ_pourtout q T) (max p q + 1)
     
   |kinding_fleche : forall (e:env) (T1 T2:typ) (p q:nat),
-    kinding e T1 (star p) -> kinding e T2 (star q) -> kinding e (typ_fleche T1 T2) (star (max p q)).
+    kinding e T1 p -> kinding e T2 q -> kinding e (typ_fleche T1 T2) (max p q).
 
 
 Inductive typing : env -> term -> typ -> Prop :=
@@ -185,14 +185,14 @@ Inductive typing : env -> term -> typ -> Prop :=
   |typing_small_lambda : forall (e:env) (t:term) (T1 T2: typ),
     typing (declare_typ T1 e) t T2 -> typing e (term_small_lambda T1 t) (typ_fleche T1 T2)
 
-  |typing_app_term : forall (e:env) (t1 t2 :term) (T1 T2 T1T2:typ),
+  |typing_app_term : forall (e:env) (t1 t2 :term) (T1 T2 :typ),
     typing e t1 (typ_fleche T1 T2) -> typing e t2 T1 -> typing e (term_app_term t1 t2) T2
 
   |typing_big_lambda : forall (e:env) (t: term) (T: typ) (p:nat),
-    typing (declare_kind (star p) e) t T -> typing e (term_big_lambda (star p) t) (typ_pourtout (star p) T)
+    typing (declare_kind p e) t T -> typing e (term_big_lambda p t) (typ_pourtout p T)
 
   |typing_app_typ : forall (e:env) (t:term) (T1 T2:typ) (l:nat),
-    typing e t (typ_pourtout (star l) T1) -> kinding e T2 (star l) -> typing e (term_app_typ t T2) (tsubst 0 T2 T1).
+    typing e t (typ_pourtout l T1) -> kinding e T2 l -> typing e (term_app_typ t T2) (tsubst 0 T2 T1).
 
 (* Remarque : chacune des règles conserve les indices de Bruijn : on n'a pas besoin de faire des décalages *)
 
@@ -201,25 +201,25 @@ Inductive typing : env -> term -> typ -> Prop :=
 (* On peut décider si deux kinds k et l sont égaux *)
 Lemma kind_eq_dec : forall (k l :kind), {k=l} + {k<>l}.
 Proof.
-decide equality; decide equality.
+decide equality.
 Qed.
 
 (* On peut décider si deux types T et U sont égaux *)
 Lemma typ_eq_dec : forall (T U :typ), {T=U} + {T<>U}.
 Proof.
-decide equality; decide equality; decide equality.
+decide equality; decide equality.
 Qed.
 
 
 Fixpoint infer_kind (e:env) (T:typ) :=
   match T with
     |typ_var X => if wf_env e then get_kind X e else None
-    |typ_pourtout (star q) T1 => match infer_kind (declare_kind (star q) e) T1 with 
+    |typ_pourtout q T1 => match infer_kind (declare_kind q e) T1 with 
           |None => None 
-          |Some (star p) => Some (star(max p q + 1))
+          |Some p => Some (max p q + 1)
           end
     |typ_fleche T1 T2 => match (infer_kind e T1, infer_kind e T2) with
-          |(Some (star p), Some (star q)) => Some (star (max p q))
+          |(Some p, Some q) => Some (max p q)
           |_ => None
           end
      end.
@@ -251,98 +251,62 @@ Fixpoint infer_type (e:env) (t:term) :=
   end.
 
 
-(* Lemma kinference_correct : forall (T:typ) (e:env), 
-  forall r, infer_kind e T = Some (star r) -> kinding e T (star r).
-induction T.
-- intros e r infer. simpl. inversion infer. 
-  split.
-  + exists r. split.
-    now destruct (wf_env e). trivial.
-  + destruct (wf_env e). trivial. discriminate.
-- intros e max_pq infer. simpl.
-  inversion infer.
-  specialize (IHT1 e); specialize (IHT2 e).
-  destruct (infer_kind e T1) as [k1 |]. destruct (infer_kind e T2) as [k2|].
-  + destruct k1 as [p]. destruct k2 as [q].
-    exists p,q.
-    split. now apply IHT1. split. now apply IHT2. now injection H0.
-  + destruct k1 as [p]. discriminate.
-  + discriminate.
-- intros e max_pq_plus1 infer. simpl. destruct k as [q].
-  cut (exists p : nat, infer_kind (declare_kind (star q) e) T = Some (star p) /\ max_pq_plus1 = max p q + 1).
-  intro. destruct H as [p].
-  exists p. split.
-  now apply IHT. apply H.
-  inversion infer.
-  destruct (infer_kind (declare_kind (star q) e) T) as [k1|]. destruct k1 as [n].
-  + exists n. split. trivial. congruence.
-  + discriminate H0.
-Qed.
-*)
-
 Lemma kinference_correct : forall (T:typ) (e:env), 
-  forall r, infer_kind e T = Some (star r) -> kinding e T (star r).
+  forall r, infer_kind e T = Some r -> kinding e T r.
 Proof.
 induction T as [q|T1 IH1 T2 IH2| k T];intros e r infer; inversion infer as [H].
 - remember (wf_env e) as wf eqn:Hwf.
   destruct (wf);[apply (kinding_var) with r;[apply H|omega|symmetry;apply Hwf]|discriminate].
 - remember (infer_kind e T1) as infT1 eqn:Hinft1; remember (infer_kind e T2) as infT2 eqn:Hinft2.
-  destruct infT1 as [k1|];[destruct k1 as [n]; destruct infT2 as [k2|];[destruct k2 as [m]|discriminate] |discriminate].
+  destruct infT1 as [k1|];[destruct infT2 as [k2|];[|discriminate] |discriminate].
   injection H; intro H1; rewrite <- H1.
   apply (kinding_fleche);[apply IH1;symmetry; apply Hinft1 | apply IH2; symmetry; apply Hinft2].
-- destruct k. remember (infer_kind (declare_kind (star n) e) T) as infT eqn:Hint. destruct infT as [l|];[|discriminate];destruct l as [m].
+- remember (infer_kind (declare_kind k e) T) as infT eqn:Hint. destruct infT as [l|];[|discriminate].
   injection H; intro H1; rewrite <- H1; apply kinding_pourtout; apply IHT; symmetry; apply Hint.
 Qed.
-  
+
 Lemma tinference_correct : forall (t:term) (e:env) (T:typ), 
   infer_type e t = Some (T) -> typing e t T.
-induction t as [|T1|t1|k t|t Heq T2].
-- intros e T infer. simpl. inversion infer.
-  split.
-  + now destruct (wf_env e).
-  + destruct (wf_env e). trivial. discriminate.
-- intros e T1T2 infer. simpl; inversion infer.
-  destruct T1T2 as [|T1' T2|].
-  + destruct (infer_type (declare_typ T1 e) t); discriminate; discriminate.
-  + destruct (infer_type (declare_typ T1 e) t) as [T3|].
-    split. injection H0. intros. now rewrite H1.
-    apply IHt. inversion infer.
-    destruct (infer_type (declare_typ T1 e) t) as [T4|].
-    injection H1. intros. now rewrite H.
-    discriminate.
-    discriminate.
-  + destruct (infer_type (declare_typ T1 e) t). discriminate. discriminate.
-- intros e T2 infer. simpl. inversion infer.
-  remember (infer_type e t1) as T1T2.
-  destruct T1T2 as [T1T2|_].
-  destruct T1T2 as [|T1' T2'|].
-  + discriminate.
-  + exists T1'. split.
-    * apply IHt1; destruct (infer_type e t2) as [T|]. destruct (typ_eq_dec T1' T).
-      congruence. discriminate. discriminate.
-    * apply IHt2. destruct (infer_type e t2) as [T|]. destruct (typ_eq_dec T1' T).
-      congruence. discriminate. discriminate.
-  + discriminate.
-  + discriminate.
-- intros e T infer. simpl. inversion infer. destruct k. destruct T as [| |].
-  + destruct (infer_type (declare_kind (star n) e) t);discriminate.
-  + destruct (infer_type (declare_kind (star n) e) t); discriminate.
-  + remember (infer_type (declare_kind (star n) e) t) as T'.
-    destruct T' as [T1|].
-    * destruct k as [m]. split.
-      congruence.
-      apply IHt. congruence.
-    * discriminate.
-- intros e T3 infer. simpl. inversion infer. 
-  remember (infer_type e t) as allT1. destruct allT1 as [allT1|]. destruct allT1 as [ | |k T1]. discriminate. discriminate.
-  remember (infer_kind e T2) as k1. destruct k1 as [k1|].
-  exists k1, T1. split.
-  + destruct k1 as [n]. apply kinference_correct. congruence.
-  + split.
-    * apply Heq. destruct (kind_eq_dec k k1) as [k_k1|]. congruence. discriminate.
-    * destruct (kind_eq_dec k k1). injection H0. auto. discriminate.
-  + discriminate.
-  + discriminate.
+Proof.
+induction t as [n|T1 t|t1 IH1 t2 IH2|p t|t IH T2]; intro e.
+- intros T infer. inversion infer as [H].
+  remember (wf_env e) as wf eqn:Hwf.
+  destruct wf;[apply typing_var;
+    [apply H |
+    symmetry; apply Hwf] |
+    discriminate].
+
+- intros T1T2 infer; inversion infer as [H].
+  remember (infer_type (declare_typ T1 e) t) as T2 eqn:Hinft; destruct T2 as [T2|];[|discriminate].
+  injection H; intro H1; rewrite <- H1.
+  apply typing_small_lambda;
+    apply IHt; symmetry; assumption.
+
+- intros T2 infer. inversion infer as [H].
+  remember (infer_type e t1) as T1T2 eqn:Hinft1; remember (infer_type e t2) as T1 eqn:Hinft2.
+  destruct T1T2 as [T1T2|];[|discriminate]. destruct T1T2 as [ |T1' T2'| ]; [discriminate| |discriminate].
+  destruct T1 as [T1|];[|discriminate].
+  remember (typ_eq_dec T1' T1) as eq_dec; destruct eq_dec as [T1eqT1'|]; [|discriminate].
+  injection H; intro H1; rewrite <- H1.
+  apply typing_app_term with T1';
+    [apply IH1; symmetry; apply Hinft1 |
+    apply IH2; symmetry; rewrite T1eqT1'; apply Hinft2].
+
+- intros allpT infer; inversion infer as [H].
+  remember (infer_type (declare_kind p e) t) as T; destruct T as [T|]; [|discriminate].
+  injection H; intro H1; rewrite <- H1.
+  apply typing_big_lambda;
+    apply IHt; symmetry; apply HeqT.
+
+- intros T3 infer; inversion infer as [H].
+  remember (infer_type e t) as all_lT1 eqn:Hinft; remember (infer_kind e T2) as l eqn:HinfT2.
+  destruct all_lT1 as [all_lT1|]; [|discriminate]; destruct all_lT1 as [ | | l' T1]; [discriminate | discriminate |].
+  destruct l as [l|]; [|discriminate].
+  remember (kind_eq_dec l' l) as eq_dec; destruct eq_dec as [l'eql|];[|discriminate].
+  injection H; intro H1; rewrite <- H1.
+  apply typing_app_typ with l';
+    [apply IH; symmetry; apply Hinft | 
+     apply kinference_correct; symmetry; rewrite l'eql; apply HinfT2].
 Qed.
 
 
