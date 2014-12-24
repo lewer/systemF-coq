@@ -1,16 +1,21 @@
+(* comment nommer seulement certaines hyp dans les inversion ? *)
+(* un truc moins bourrin que inversion ? *)
+(* beq_nat ou eq_nat_dec ? *)
+(* pas grave le kind = nat ? *)
+
 Require Export Arith.
 
+Definition var := nat.
 
-Inductive kind :=
-  | Star : nat -> kind.
+Definition kind := nat.
 
 Inductive typ :=
-  | TyVar : nat -> typ
-  | Imp : typ -> typ -> typ
-  | Forall : kind -> typ -> typ.
+  | TyVar : var -> typ
+  | Arrow : typ -> typ -> typ
+  | FAll : kind -> typ -> typ.
 
 Inductive term :=
-  | Var : nat -> term
+  | Var : var -> term
   | Lam : typ -> term -> term
   | App : term -> term -> term
   | Abs : kind -> term -> term
@@ -22,7 +27,7 @@ Inductive env :=
   | ConsT : typ -> env -> env.
 
 
-Fixpoint get_kind (X : nat) (e : env) :=
+Fixpoint get_kind (X : var) (e : env) :=
   match (X, e) with
     | (0, ConsK K _) => Some K
     | (S X, ConsK _ e) => get_kind X e
@@ -30,7 +35,7 @@ Fixpoint get_kind (X : nat) (e : env) :=
     | _ => None
   end.
 
-Fixpoint get_type (x : nat) (e : env) :=
+Fixpoint get_type (x : var) (e : env) :=
   match (x, e) with
     | (0, ConsT T _) => Some T
     | (S x, ConsK _ e) => get_type x e
@@ -45,17 +50,17 @@ Inductive wf : env -> Prop :=
   | WfConT : forall T e, forall K, kinding e T K -> wf e -> wf (ConsT T e)
 
 with kinding : env -> typ -> kind -> Prop :=
-  | KVar : forall e X p q, wf e -> get_kind X e = Some (Star p) -> (p <= q) -> kinding e (TyVar X) (Star q)
-  | KImp : forall e T1 T2 p q, kinding e T1 (Star p) -> kinding e T2 (Star q) -> kinding e (Imp T1 T2) (Star (max p q))
-  | KForall : forall e T p q, kinding (ConsK (Star q) e) T (Star p) -> kinding e (Forall (Star p) T) (Star (S (max p q))).
+  | KVar : forall e X p q, wf e -> get_kind X e = Some p -> (p <= q) -> kinding e (TyVar X) q
+  | KArrow : forall e T1 T2 p q, kinding e T1 p -> kinding e T2 q -> kinding e (Arrow T1 T2) (max p q)
+  | KFAll : forall e T p q, kinding (ConsK q e) T p -> kinding e (FAll p T) (S (max p q)).
 
 
 (* c=cut, d=nb de fois à décaler *)
 Fixpoint tshift_aux (c:nat) (d:nat) (T:typ) :=
   match T with
     | TyVar X => if le_dec c X then TyVar (X+d) else T
-    | Imp T1 T2 => Imp (tshift_aux c d T1) (tshift_aux c d T2)
-    | Forall K T => Forall K (tshift_aux (S c) d T)
+    | Arrow T1 T2 => Arrow (tshift_aux c d T1) (tshift_aux c d T2)
+    | FAll K T => FAll K (tshift_aux (S c) d T)
   end.
 
 Definition tshift := tshift_aux 0 1.
@@ -64,23 +69,20 @@ Definition tshift := tshift_aux 0 1.
 Fixpoint tsubst (X:nat) (U:typ) (T:typ) :=
   match T with
     | TyVar Y => if (eq_nat_dec X Y) then U else T
-    | Imp T1 T2 => Imp (tsubst X U T1) (tsubst X U T2)
-    | Forall K T => Forall K (tsubst (S X) (tshift U) T)
+    | Arrow T1 T2 => Arrow (tsubst X U T1) (tsubst X U T2)
+    | FAll K T => FAll K (tsubst (S X) (tshift U) T)
   end.
-(* ??? est-ce que c'est mieux eq_nat_dec ou beq_nat ? ??? *)
-
 
 Inductive typing : env -> term -> typ -> Prop :=
   | TVar : forall e x T, wf e -> get_type x e = Some T -> typing e (Var x) T
-  | TLam : forall e t T1 T2, typing (ConsT T1 e) t T2 -> typing e (Lam T1 t) (Imp T1 T2)
-  | TApp : forall e t1 t2 T1 T2, typing e t1 (Imp T1 T2) -> typing e t2 T1 -> typing e (App t1 t2) T2
-  | TAbs : forall e t K T, typing (ConsK K e) t T -> typing e (Abs K t) (Forall K T)
-  | TAppT : forall e t K T1 T2, typing e t (Forall K T1) -> kinding e T2 K -> typing e (AppT t T2) (tsubst 0 T2 T1).
+  | TLam : forall e t T1 T2, typing (ConsT T1 e) t T2 -> typing e (Lam T1 t) (Arrow T1 T2)
+  | TApp : forall e t1 t2 T1 T2, typing e t1 (Arrow T1 T2) -> typing e t2 T1 -> typing e (App t1 t2) T2
+  | TAbs : forall e t K T, typing (ConsK K e) t T -> typing e (Abs K t) (FAll K T)
+  | TAppT : forall e t K T1 T2, typing e t (FAll K T1) -> kinding e T2 K -> typing e (AppT t T2) (tsubst 0 T2 T1).
 
 
 Lemma kinding_wf : forall e T K, kinding e T K -> wf e.
 Proof.
-  intros e T K H. induction H.
-  assumption. assumption.
-  inversion IHkinding. assumption. (* tu utiliserais quoi à la place d'inversion ? *)
+  intros e T K H. induction H; try assumption.
+  inversion IHkinding. assumption.
 Qed.
