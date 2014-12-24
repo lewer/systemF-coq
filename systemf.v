@@ -76,9 +76,9 @@ Definition t_shift_t := t_shift_t_aux 0 1.
 Fixpoint subst_typ (X:nat) (U:typ) (t:term) :=
   match t with
     |Var _ => t
-    |Lam T t1 => Lam T (subst_typ (X-1) (typ_shift_in_type U) t1)
+    |Lam T t1 => Lam T (subst_typ (X-1) (ty_shift_ty U) t1)
     |App t1 t2 => App (subst_typ X U t1) (subst_typ X U t2)
-    |Abs k t1 => Abs k (subst_typ (X-1) (typ_shift_in_type U) t1)
+    |Abs k t1 => Abs k (subst_typ (X-1) (ty_shift_ty U) t1)
     |AppT t1 T => AppT (subst_typ X U t1) (tsubst X U T)
     end.
 
@@ -90,9 +90,9 @@ Fixpoint subst (x:nat) (t1:term) (t2:term) :=
       |inleft(right _) => t1
       |inright(_) => t2
       end
-    |Lam T t3 => Lam T (subst (x-1) (term_shift_in_term t1) t3)
+    |Lam T t3 => Lam T (subst (x-1) (t_shift_t t1) t3)
     |App t3 t4 => App (subst x t1 t3) (subst x t1 t4)
-    |Abs k t3 => Abs k (subst (x-1) (term_shift_in_term t1) t3)
+    |Abs k t3 => Abs k (subst (x-1) (t_shift_t t1) t3)
     |AppT t3 T => AppT (subst x t1 t3) T
     end.
 
@@ -358,4 +358,3 @@ Qed.
     
       
     
-
