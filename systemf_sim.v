@@ -52,7 +52,7 @@ Inductive wf : env -> Prop :=
 with kinding : env -> typ -> kind -> Prop :=
   | KVar : forall e X p q, wf e -> get_kind X e = Some p -> (p <= q) -> kinding e (TyVar X) q
   | KArrow : forall e T1 T2 p q, kinding e T1 p -> kinding e T2 q -> kinding e (Arrow T1 T2) (max p q)
-  | KFAll : forall e T p q, kinding (ConsK q e) T p -> kinding e (FAll p T) (S (max p q)).
+  | KFAll : forall e T p q, kinding (ConsK q e) T p -> kinding e (FAll q T) (S (max p q)).
 
 
 (* c=cut, d=nb de fois à décaler *)
@@ -97,7 +97,7 @@ Fixpoint infer_kind (e:env) (T:typ) :=
                        | _ => None
                      end
     | FAll q T => match infer_kind (ConsK q e) T with 
-                    | Some p => Some (S (max q p))
+                    | Some p => Some (S (max p q))
                     | _ => None
                   end
   end.
@@ -118,3 +118,5 @@ Proof.
   + intros e K Hwf H. simpl in H.
     remember (infer_kind (ConsK k e) T) as opt. destruct opt; [|discriminate].
     inversion H. apply KFAll. apply IHT. apply WfConsK. assumption.
+    now symmetry.
+Qed.
