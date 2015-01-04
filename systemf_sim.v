@@ -4,6 +4,8 @@
 (* pas grave le kind = nat ? *)
 
 Require Export Arith.
+Require Export Max.
+Require Export Omega.
 
 Definition var := nat.
 
@@ -87,6 +89,20 @@ Proof.
   inversion IHkinding. assumption.
 Qed.
 
+Lemma cumulativity : forall T e K1 K2, K1 <= K2 -> kinding e T K1 -> kinding e T K2.
+Proof.
+  induction T; intros e K1 K2 Hle H; inversion H; subst.
+  + eapply KVar; try eassumption. omega.
+  + replace K2 with (max K2 K2). apply KArrow.
+    - apply (IHT1 _ p). apply (max_lub_l _ _ _ Hle). assumption.
+    - apply (IHT2 _ q). apply (max_lub_r _ _ _ Hle). assumption.
+    - apply max_idempotent.
+  + destruct K2 as [|K2]. inversion Hle. apply le_S_n in Hle.
+    replace K2 with (max K2 k). apply KFAll.
+    - apply (IHT _ p). apply (max_lub_l _ _ _ Hle). assumption.
+    - apply max_lub_r in Hle. now apply max_l.
+Qed.
+
 
 (* Question 1.5 - Inférence *)
 Fixpoint infer_kind (e:env) (T:typ) :=
@@ -103,7 +119,7 @@ Fixpoint infer_kind (e:env) (T:typ) :=
   end.
 
 
-Lemma kind_infer_correct : forall T e K,
+Lemma infer_kind_correct : forall T e K,
   wf e -> infer_kind e T = Some K -> kinding e T K .
 Proof.
   induction T.
@@ -120,3 +136,76 @@ Proof.
     inversion H. apply KFAll. apply IHT. apply WfConsK. assumption.
     now symmetry.
 Qed.
+
+(* Question 5 *)
+
+(* On peut décider si deux kinds k et l sont égaux *)
+Lemma eq_kind_dec : forall (k l :kind), {k=l} + {k<>l}.
+Proof.
+  exact eq_nat_dec.
+Qed.
+
+(* On peut décider si deux types T et U sont égaux *)
+Lemma eq_typ_dec : forall (T U :typ), {T=U} + {T<>U}.
+Proof.
+  decide equality; decide equality.
+Qed.
+
+
+Fixpoint infer_type (e:env) (t:term) :=
+  match t with 
+    | Var x => get_type x e
+    | Lam T t => match (infer_kind e T, infer_type (ConsT T e) t) with
+                   | (Some _, Some T') => Some (Arrow T T')
+                   | _ => None
+                 end
+    | App t1 t2 => match (infer_type e t1, infer_type e t2) with
+                     | (Some (Arrow T1 T2), Some T1') => if eq_typ_dec T1 T1' then Some T2 else None
+                     | _ => None
+                   end
+    | Abs K t => match infer_type (ConsK K e) t with
+                   | Some T => Some (FAll K T)
+                   | _ => None
+                 end
+    | AppT t T2 => match (infer_kind e T2, infer_type e t) with
+                     | (Some K2, Some (FAll K1 T1)) => if le_dec K2 K1 then Some (tsubst 0 T2 T1) else None
+                     | _ => None
+                   end
+  end.
+
+
+Lemma infer_type_correct : forall t e T,
+  wf e -> infer_type e t = Some T -> typing e t T.
+Proof.
+  induction t  as [v|T1 t|t1 IHt1 t2 IHt2|K t|t IHt T2].
+  + intros e T Hwf H. simpl in H. now apply TVar.
+  + intros e T' Hwf H. simpl in H.
+    remember (infer_kind e T1) as opt1. destruct opt1 as [K|]; [|discriminate].
+    remember (infer_type (ConsT T1 e) t) as opt2. destruct opt2 as [T2|]; [|discriminate]. inversion H. apply TLam. apply IHt; [|auto].
+    apply (WfConsT _ _ K). now apply infer_kind_correct. assumption.
+  + intros e T Hwf H. simpl in H.
+    remember (infer_type e t1) as opt1. destruct opt1 as [T1|]; [|discriminate]. destruct T1 as [|T1 T2|]; try discriminate.
+    remember (infer_type e t2) as opt2. destruct opt2 as [T1'|]; [|discriminate].
+    destruct (eq_typ_dec T1 T1'); [|discriminate].
+    inversion H. apply (TApp _ _ _ T1 T).
+    - apply IHt1; auto. congruence.
+    - apply IHt2; auto. congruence.
+  + intros e T Hwf H. simpl in H.
+    remember (infer_type (ConsK K e) t) as opt. destruct opt as [T1|]; [|discriminate].
+    inversion H. apply TAbs.
+    apply IHt. now apply WfConsK. congruence.
+  +  intros e T Hwf H. simpl in H.
+     remember (infer_kind e T2) as opt. destruct opt as [K2|]; [|discriminate].
+     remember (infer_type e t) as opt. destruct opt as [T1|]; [|discriminate].
+     destruct T1 as [| |K1 T1]; try discriminate.
+     destruct (le_dec K2 K1); [|discriminate].
+     inversion H. apply (TAppT _ _ K1).
+     - apply IHt; congruence.
+     - apply (cumulativity _ _ K2). assumption.
+       apply infer_kind_correct; congruence.
+Qed.
+
+
+       
+(*    Scheme popo := Induction for kinding Sort Prop
+with opopo := Induction for wf Sort Prop.*)
