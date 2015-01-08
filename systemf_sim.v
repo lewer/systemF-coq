@@ -57,15 +57,15 @@ with kinding : env -> typ -> kind -> Prop :=
   | KFAll : forall e T p q, kinding (ConsK q e) T p -> kinding e (FAll q T) (S (max p q)).
 
 
-(* c=cut, d=nb de fois à décaler *)
-Fixpoint tshift_aux (c:nat) (d:nat) (T:typ) :=
+(* c=cutoff *)
+Fixpoint tshift_aux (c:nat) (T:typ) :=
   match T with
-    | TyVar X => if le_dec c X then TyVar (X+d) else T
-    | Arrow T1 T2 => Arrow (tshift_aux c d T1) (tshift_aux c d T2)
-    | FAll K T => FAll K (tshift_aux (S c) d T)
+    | TyVar X => if le_dec c X then TyVar (S X) else T
+    | Arrow T1 T2 => Arrow (tshift_aux c T1) (tshift_aux c T2)
+    | FAll K T => FAll K (tshift_aux (S c) T)
   end.
 
-Definition tshift := tshift_aux 0 1.
+Definition tshift := tshift_aux 0.
 
 (* substitution de X par U dans T *)
 Fixpoint tsubst (X:nat) (U:typ) (T:typ) :=
@@ -206,6 +206,152 @@ Proof.
 Qed.
 
 
+(* Weakening *)
        
-(*    Scheme popo := Induction for kinding Sort Prop
-with opopo := Induction for wf Sort Prop.*)
+Inductive insert_kind : var -> env -> env -> Prop :=
+| Top : forall e K, insert_kind 0 e (ConsK K e)
+| BellowK : forall e e' X K, insert_kind X e e'
+                        -> insert_kind (S X) (ConsK K e) (ConsK K e')
+| BellowT : forall e e' X T, insert_kind X e e'
+                        -> insert_kind (S X) (ConsT T e) (ConsT (tshift_aux X T) e').
+
+
+Lemma insert_kind_get_kind : forall X e e', insert_kind X e e' -> forall Y,
+                  get_kind Y e = (get_kind (if le_dec X Y then S Y else Y) e').
+Proof.
+  intros X e e' H. induction H; intros.
+  + reflexivity.  
+  + destruct Y; simpl.
+    reflexivity.
+    destruct (le_dec (S X) (S Y)).
+    remember (S Y) as Y0. simpl.
+    rewrite IHinsert_kind.
+    assert ((if le_dec X Y then S Y else Y) = Y0).
+    subst. apply le_S_n in l. destruct (le_dec X Y).
+    reflexivity. intuition. rewrite <- H0.
+    reflexivity.
+    rewrite IHinsert_kind.
+    assert ((if le_dec X Y then S Y else Y) = Y).
+    destruct (le_dec X Y). apply le_n_S in l.
+    intuition. reflexivity. simpl. rewrite <- H0 at 2.
+    reflexivity.
+  + destruct Y; simpl.
+    reflexivity.
+    destruct (le_dec (S X) (S Y)).
+    remember (S Y) as Y0. simpl.
+    rewrite IHinsert_kind.
+    assert ((if le_dec X Y then S Y else Y) = Y0).
+    subst. apply le_S_n in l. destruct (le_dec X Y).
+    reflexivity. intuition. rewrite <- H0.
+    reflexivity.
+    rewrite IHinsert_kind.
+    assert ((if le_dec X Y then S Y else Y) = Y).
+    destruct (le_dec X Y). apply le_n_S in l.
+    intuition. reflexivity. simpl. rewrite <- H0 at 2.
+    reflexivity.
+Qed.
+
+
+Scheme popo := Induction for kinding Sort Prop
+with opopo := Induction for wf Sort Prop.
+
+Lemma insert_kind_wf : forall X e e',
+                         insert_kind X e e' -> wf e -> wf e'.
+Proof.
+  intros X e e' Hins Hwf.
+  eapply (opopo (fun e T K Hk => forall X e', insert_kind X e e' -> kinding e' (tshift_aux X T) K)
+         (fun e Hwf => forall X e', insert_kind X e e' -> wf e')); intros; simpl. (*_ _ _ _ _ _ e Hwf X).??*)
+  + specialize (insert_kind_get_kind _ _ _ H0 X0). intros.
+    destruct (le_dec X1 X0); eapply KVar; eauto. congruence.
+    congruence.
+  + apply KArrow; auto.
+  + apply KFAll. apply H. now apply BellowK.
+  + inversion H. apply WfConsK. apply WfNil.
+  + inversion H0; subst. apply WfConsK. now apply WfConsK.
+    apply WfConsK. eapply H. eassumption.
+  + inversion H1; subst. apply WfConsK. eapply WfConsT; eassumption. eapply WfConsT.apply H. assumption. eapply H0. eassumption.
+  + eassumption.
+  + eassumption.
+Qed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+opopo
+     : forall
+         (P : forall (e : env) (t : typ) (k : kind), kinding e t k -> Prop)
+         (P0 : forall e : env, wf e -> Prop),
+       (forall (e : env) (X : var) (p : kind) (q : nat) (w : wf e),
+        P0 e w ->
+        forall (e0 : get_kind X e = Some p) (l : p <= q),
+        P e (TyVar X) q (KVar e X p q w e0 l)) ->
+       (forall (e : env) (T1 T2 : typ) (p q : kind) (k : kinding e T1 p),
+        P e T1 p k ->
+        forall k0 : kinding e T2 q,
+        P e T2 q k0 -> P e (Arrow T1 T2) (max p q) (KArrow e T1 T2 p q k k0)) ->
+       (forall (e : env) (T : typ) (p q : kind) (k : kinding (ConsK q e) T p),
+        P (ConsK q e) T p k -> P e (FAll q T) (S (max p q)) (KFAll e T p q k)) ->
+       P0 Nil WfNil ->
+       (forall (K : kind) (e : env) (w : wf e),
+        P0 e w -> P0 (ConsK K e) (WfConsK K e w)) ->
+       (forall (T : typ) (e : env) (K : kind) (k : kinding e T K),
+        P e T K k ->
+        forall w : wf e, P0 e w -> P0 (ConsT T e) (WfConsT T e K k w)) ->
+       forall (e : env) (w : wf e), P0 e w
+
+                                       
+popo
+     : forall
+         (P : forall (e : env) (t : typ) (k : kind), kinding e t k -> Prop)
+         (P0 : forall e : env, wf e -> Prop),
+       (forall (e : env) (X : var) (p : kind) (q : nat) (w : wf e),
+        P0 e w ->
+        forall (e0 : get_kind X e = Some p) (l : p <= q),
+        P e (TyVar X) q (KVar e X p q w e0 l)) ->
+       (forall (e : env) (T1 T2 : typ) (p q : kind) (k : kinding e T1 p),
+        P e T1 p k ->
+        forall k0 : kinding e T2 q,
+        P e T2 q k0 -> P e (Arrow T1 T2) (max p q) (KArrow e T1 T2 p q k k0)) ->
+       (forall (e : env) (T : typ) (p q : kind) (k : kinding (ConsK q e) T p),
+        P (ConsK q e) T p k -> P e (FAll q T) (S (max p q)) (KFAll e T p q k)) ->
+       P0 Nil WfNil ->
+       (forall (K : kind) (e : env) (w : wf e),
+        P0 e w -> P0 (ConsK K e) (WfConsK K e w)) ->
+       (forall (T : typ) (e : env) (K : kind) (k : kinding e T K),
+        P e T K k ->
+        forall w : wf e, P0 e w -> P0 (ConsT T e) (WfConsT T e K k w)) ->
+       forall (e : env) (t : typ) (k : kind) (k0 : kinding e t k), P e t k k0
+
+
+                                                                     
+kinding_ind
+     : forall P : env -> typ -> kind -> Prop,
+       (forall (e : env) (X : var) (p : kind) (q : nat),
+        wf e -> get_kind X e = Some p -> p <= q -> P e (TyVar X) q) ->
+       (forall (e : env) (T1 T2 : typ) (p q : kind),
+        kinding e T1 p ->
+        P e T1 p -> kinding e T2 q -> P e T2 q -> P e (Arrow T1 T2) (max p q)) ->
+       (forall (e : env) (T : typ) (p q : kind),
+        kinding (ConsK q e) T p ->
+        P (ConsK q e) T p -> P e (FAll q T) (S (max p q))) ->
+       forall (e : env) (t : typ) (k : kind), kinding e t k -> P e t k
+
+
+                                                                 
+Lemma insert_kind_wf : forall X e e',
+                         insert_kind X e e' -> (wf e -> wf e') /\ (forall T K, kinding e T K -> kinding e' (tshift_aux X T) K) /\ (forall X, get_kind (S X) e' = get_kind X e).
+Proof.
