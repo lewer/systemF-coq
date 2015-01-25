@@ -1,3 +1,4 @@
+
 (* comment nommer seulement certaines hyp dans les inversion ? *)
 (* un truc moins bourrin que inversion ? *)
 (* beq_nat ou eq_nat_dec ? *)
@@ -210,9 +211,9 @@ Qed.
        
 Inductive insert_kind : var -> env -> env -> Prop :=
 | Top : forall e K, insert_kind 0 e (ConsK K e)
-| BellowK : forall e e' X K, insert_kind X e e'
+| BelowK : forall e e' X K, insert_kind X e e'
                         -> insert_kind (S X) (ConsK K e) (ConsK K e')
-| BellowT : forall e e' X T, insert_kind X e e'
+| BelowT : forall e e' X T, insert_kind X e e'
                         -> insert_kind (S X) (ConsT T e) (ConsT (tshift_aux X T) e').
 
 
@@ -250,47 +251,20 @@ Proof.
     intuition. reflexivity. simpl. rewrite <- H0 at 2.
     reflexivity.
 Qed.
-
+(*
+wf_ind
+     : forall P : env -> Prop,
+       P Nil ->
+       (forall (K : kind) (e : env), wf e -> P e -> P (ConsK K e)) ->
+       (forall (T : typ) (e : env) (K : kind),
+        kinding e T K -> wf e -> P e -> P (ConsT T e)) ->
+       forall e : env, wf e -> P e
+*)
 
 Scheme popo := Induction for kinding Sort Prop
 with opopo := Induction for wf Sort Prop.
 
-Lemma insert_kind_wf : forall X e e',
-                         insert_kind X e e' -> wf e -> wf e'.
-Proof.
-  intros X e e' Hins Hwf.
-  eapply (opopo (fun e T K Hk => forall X e', insert_kind X e e' -> kinding e' (tshift_aux X T) K)
-         (fun e Hwf => forall X e', insert_kind X e e' -> wf e')); intros; simpl. (*_ _ _ _ _ _ e Hwf X).??*)
-  + specialize (insert_kind_get_kind _ _ _ H0 X0). intros.
-    destruct (le_dec X1 X0); eapply KVar; eauto. congruence.
-    congruence.
-  + apply KArrow; auto.
-  + apply KFAll. apply H. now apply BellowK.
-  + inversion H. apply WfConsK. apply WfNil.
-  + inversion H0; subst. apply WfConsK. now apply WfConsK.
-    apply WfConsK. eapply H. eassumption.
-  + inversion H1; subst. apply WfConsK. eapply WfConsT; eassumption. eapply WfConsT.apply H. assumption. eapply H0. eassumption.
-  + eassumption.
-  + eassumption.
-Qed.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+(*
 opopo
      : forall
          (P : forall (e : env) (t : typ) (k : kind), kinding e t k -> Prop)
@@ -312,46 +286,48 @@ opopo
         P e T K k ->
         forall w : wf e, P0 e w -> P0 (ConsT T e) (WfConsT T e K k w)) ->
        forall (e : env) (w : wf e), P0 e w
+*)
 
-                                       
-popo
-     : forall
-         (P : forall (e : env) (t : typ) (k : kind), kinding e t k -> Prop)
-         (P0 : forall e : env, wf e -> Prop),
-       (forall (e : env) (X : var) (p : kind) (q : nat) (w : wf e),
-        P0 e w ->
-        forall (e0 : get_kind X e = Some p) (l : p <= q),
-        P e (TyVar X) q (KVar e X p q w e0 l)) ->
-       (forall (e : env) (T1 T2 : typ) (p q : kind) (k : kinding e T1 p),
-        P e T1 p k ->
-        forall k0 : kinding e T2 q,
-        P e T2 q k0 -> P e (Arrow T1 T2) (max p q) (KArrow e T1 T2 p q k k0)) ->
-       (forall (e : env) (T : typ) (p q : kind) (k : kinding (ConsK q e) T p),
-        P (ConsK q e) T p k -> P e (FAll q T) (S (max p q)) (KFAll e T p q k)) ->
-       P0 Nil WfNil ->
-       (forall (K : kind) (e : env) (w : wf e),
-        P0 e w -> P0 (ConsK K e) (WfConsK K e w)) ->
-       (forall (T : typ) (e : env) (K : kind) (k : kinding e T K),
-        P e T K k ->
-        forall w : wf e, P0 e w -> P0 (ConsT T e) (WfConsT T e K k w)) ->
-       forall (e : env) (t : typ) (k : kind) (k0 : kinding e t k), P e t k k0
-
-
-                                                                     
-kinding_ind
-     : forall P : env -> typ -> kind -> Prop,
-       (forall (e : env) (X : var) (p : kind) (q : nat),
-        wf e -> get_kind X e = Some p -> p <= q -> P e (TyVar X) q) ->
-       (forall (e : env) (T1 T2 : typ) (p q : kind),
-        kinding e T1 p ->
-        P e T1 p -> kinding e T2 q -> P e T2 q -> P e (Arrow T1 T2) (max p q)) ->
-       (forall (e : env) (T : typ) (p q : kind),
-        kinding (ConsK q e) T p ->
-        P (ConsK q e) T p -> P e (FAll q T) (S (max p q))) ->
-       forall (e : env) (t : typ) (k : kind), kinding e t k -> P e t k
-
-
-                                                                 
 Lemma insert_kind_wf : forall X e e',
-                         insert_kind X e e' -> (wf e -> wf e') /\ (forall T K, kinding e T K -> kinding e' (tshift_aux X T) K) /\ (forall X, get_kind (S X) e' = get_kind X e).
+                         insert_kind X e e' -> wf e -> wf e'.
 Proof.
+  intros X e e' Hins Hwf.
+  eapply (opopo (fun e T K Hk => forall X e', insert_kind X e e' -> kinding e' (tshift_aux X T) K)
+         (fun e Hwf => forall X e', insert_kind X e e' -> wf e')); intros; simpl. (*_ _ _ _ _ _ e Hwf X).??*)
+  + specialize (insert_kind_get_kind _ _ _ H0 X0). intros.
+    destruct (le_dec X1 X0); eapply KVar; eauto. congruence.
+    congruence.
+  + apply KArrow; auto.
+  + apply KFAll. apply H. now apply BelowK.
+  + inversion H. apply WfConsK. apply WfNil.
+  + inversion H0; subst. apply WfConsK. now apply WfConsK.
+    apply WfConsK. eapply H. eassumption.
+  + inversion H1; subst. apply WfConsK. eapply WfConsT; eassumption. eapply WfConsT. apply H. assumption. eapply H0. eassumption.
+  + eassumption.
+  + eassumption.
+Qed.
+
+
+Lemma insert_kind_kinding : forall e T K, kinding e T K ->
+              forall X e', insert_kind X e e' -> kinding e' (tshift_aux X T) K.
+Proof.
+  intros e T K Hk.
+  induction Hk; simpl; intros X0 e' Hins.
+  + destruct (le_dec X0 X).
+    - apply (KVar _ _ p).
+      eapply insert_kind_wf; eassumption.
+      rewrite (insert_kind_get_kind _ _ _ Hins X) in H0.
+      destruct (le_dec X0 X); [trivial|contradiction]. assumption.
+    - apply (KVar _ _ p).
+      eapply insert_kind_wf; eassumption.
+      rewrite (insert_kind_get_kind _ _ _ Hins X) in H0.
+      destruct (le_dec X0 X); [contradiction|trivial]. assumption.
+  + apply KArrow; auto.
+  + apply KFAll. apply IHHk. apply BelowK. assumption.
+Qed.
+
+
+
+
+
+
