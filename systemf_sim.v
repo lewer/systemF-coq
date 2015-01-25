@@ -376,3 +376,11 @@ Proof.
     eapply insert_kind_kinding; eassumption.
     admit.
 Qed.
+
+Inductive env_subst : var -> typ -> env -> env -> Prop :=
+  |SubstNil : forall X T, env_subst X T Nil Nil
+  |SubstSubst : forall X T e, env_subst X T (ConsT (TyVar X) e) (ConsT T e)
+  |SubstConsK : forall X T e e', env_subst X T e e' -> 
+                     forall K, env_subst X T (ConsK K e) (ConsK K e')
+  |SubstConsT : forall X T e e', env_subst X T e e' ->
+                     forall U, env_subst X T (ConsT U e) (ConsT (tsubst X T U) e').
