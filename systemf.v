@@ -18,9 +18,9 @@ Inductive typ : Type :=
   |FAll : kind -> typ -> typ.
 
 (* c=cut, d=nb de fois à décaler *)
-Fixpoint ty_shift_ty_aux (c:nat) (d:nat) (T:typ) :=
+Fixpoint ty_shift_ty_aux (c:nat) (d:nat) (T:typ) {struct T}:=
   match T with
-    | TyVar X => if le_dec c X then TyVar (X+d) else T
+    | TyVar X => if le_dec c X then TyVar (S X) else T
     | Arrow T1 T2 => Arrow (ty_shift_ty_aux c d T1) (ty_shift_ty_aux c d T2)
     | FAll K T => FAll K (ty_shift_ty_aux (S c) d T)
   end.
@@ -105,20 +105,19 @@ Inductive env : Set :=
 
 (*Soit e un environnement et X une variable de type, la fonction qui suit renvoie le kind e(X) 
  si défini, None sinon *)
-Fixpoint get_kind (X:nat) (e:env) :=
+Fixpoint get_kind (X:nat) (e:env) {struct e}:=
   match (e, X) with 
-    |(Nil, _) => None
     |(ConsK T e1, 0) => Some T
     |(ConsK T e1, S n) => get_kind n e1
-    |(ConsT t e1, 0) => None
     |(ConsT t e1, S n) => get_kind n e1
+    |_ => None
     end.
 
 (*Soit e un environnement et X une variable de terme, la fonction qui suit
  renvoie e(x) si défini, None sinon *)
 Fixpoint get_type (x:nat) (e:env) :=
   match (e, x) with 
-    |(Nil,_) => None
+    |(Nil,x) => None
     |(ConsK T e1, 0) => None
     |(ConsK T e1, S n) => get_type n e1
     |(ConsT t e1, 0) => Some t
@@ -345,3 +344,63 @@ induction T as [X|T1 IH1 T2 IH2 |l T1 IH];intro e; intros q s H0 H; simpl.
   apply kinding_pourtout.
   apply IH with p; [apply H5 | omega].
 Qed.
+
+(* ------ Type substitution ------ *)
+
+Inductive insert_kind : nat -> env -> env -> Prop :=
+  |extend : forall (e:env) (k:kind), insert_kind 0 e (ConsK k e)
+  |insert_k :  
+    forall (e1 e2:env) (n:nat) (k:kind), insert_kind n e1 e2 -> insert_kind (S n) (ConsK k e1) (ConsK k e2)
+  |insert_t : 
+    forall (e1 e2:env) (n:nat) (T:typ), insert_kind n e1 e2 -> insert_kind (S n) (ConsT T e1) (ConsT (ty_shift_ty_aux n 1 T) e2).
+
+Lemma wf_typ_preserved_extension : forall (T:typ) (e:env),
+  wf_typ e T=true -> forall (k:kind), wf_typ (ConsK k e) (ty_shift_ty T)=true.
+Proof.
+induction T; intro e.
+- intros H k. apply H.
+- intros. simpl in H. assert (wf_typ e T1=true /\ wf_typ e T2 = true) as [H1 H2] by ( now apply (andb_true_iff)).
+  simpl. apply andb_true_iff. split; [now apply IHT1 | now apply IHT2].
+- intros H l. simpl. apply IHT.
+
+
+Lemma insert_kind_wf_typ : forall (n:nat) (T:typ) (e e':env),
+  insert_kind n e e' -> (wf_typ e T=true) -> (wf_typ e' (ty_shift_ty_aux n 1 T) =true).
+induction T as [X|T1 IH1 T2 IH2 |l T].
+- intros e e' H1 H2.
+  induction H1.
+  + apply H2.
+  + destruct X. 
+    * trivial.
+    * simpl. simpl in H2. 
+      case (le_dec (S n) (S X)). intro. simpl.
+      
+    
+SearchAbout le.
+
+
+
+
+
+simpl in H0. simpl. apply andb_true_intro.
+    apply andb_true_iff. apply andb_true_intro.
+    assert (wf_typ Nil T1=true /\ wf_typ Nil T2=true) by (now apply andb_true_iff).
+    destruct H1.
+    split; now auto.
+  + simpl. simpl in H0.  *)
+    
+
+Lemma insert_kind_wf_env : forall (k:kind) (e e':env), 
+  insert_kind k e e' -> wf_env e = true -> wf_env e' = true.
+Proof.
+intros k. induction e as [ |l|T]; intro e'.
+- intro H. now inversion H.
+- intros H1 H2. simpl in H2. inversion H1 as [ | e1 e2 H3 H4 H5 H6 H7|].
+  + now simpl.
+  + simpl; apply IHe;[apply H5 | apply H2].
+- intros H1 H2. simpl in H2. inversion H1 as [ | e1 e2 H3 H4 H5|].
+  + now simpl.
+  + simpl.
+
+
+

@@ -1,3 +1,4 @@
+
 (* comment nommer seulement certaines hyp dans les inversion ? *)
 (* un truc moins bourrin que inversion ? *)
 (* beq_nat ou eq_nat_dec ? *)
@@ -237,7 +238,6 @@ Inductive insert_kind : var -> env -> env -> Prop :=
       insert_kind (S X) (ConsT T e) (ConsT (tshift X T) e').
 
 
-
 Lemma insert_kind_get_kind : forall X e e', insert_kind X e e' -> forall Y,
                   get_kind Y e = (get_kind (if leb X Y then S Y else Y) e').
 Proof.
@@ -254,7 +254,6 @@ Proof.
     destruct (leb X Y) eqn:?.
     reflexivity. reflexivity.
 Qed.
-
 
 
 Scheme kinding_ind_mut := Induction for kinding Sort Prop
@@ -282,10 +281,27 @@ assumption. eapply IHHwf0. eassumption.
 Qed.
 
 
+Lemma insert_kind_kinding : forall e T K, kinding e T K ->
+              forall X e', insert_kind X e e' -> kinding e' (tshift X T) K.
+Proof.
+  intros e T K Hk.
+  induction Hk; simpl; intros X0 e' Hins.
+  + rewrite (insert_kind_get_kind _ _ _ Hins X) in H0.
+    destruct (leb X0 X).
+    - apply (KVar _ _ p); try easy.
+      eapply insert_kind_wf; eassumption.
+    - apply (KVar _ _ p); try easy.
+      eapply insert_kind_wf; eassumption.
+  + apply KArrow; auto.
+  + apply KFAll. apply IHHk. apply BelowK. assumption.
+Qed.
+
+
 
 Lemma pouet : forall T c,
   tshift 0 (tshift c T) = tshift (S c) (tshift 0 T).
 Admitted.
+
 
 Lemma insert_kind_get_type : forall X e e', insert_kind X e e' -> forall x,
             get_type x e' = match nat_compare X x with
@@ -339,6 +355,6 @@ Proof.
   + replace (tshift X (tsubst 0 T2 T1)) with (tsubst 0 (tshift X T2) (tshift (S X) T1)).
     apply (TAppT _ _ K). replace (FAll K (tshift (S X) T1)) with (tshift X (FAll K T1)).
     now apply IHHt. reflexivity.
-    admit.
+    eapply insert_kind_kinding; eassumption.
     admit.
 Qed.
