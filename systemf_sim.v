@@ -298,12 +298,30 @@ Qed.
 
 
 
-Lemma pouet : forall T c,
-  tshift 0 (tshift c T) = tshift (S c) (tshift 0 T).
-Admitted.
+Lemma tshift_tshift : forall T c d,
+  tshift c (tshift (c+d) T) = tshift (S (c+d)) (tshift c T).
+Proof.
+  induction T; intros; simpl.
+  + destruct (leb (c+d) v) eqn:?; simpl.
+    * specialize (leb_complete _ _ Heqb); intros.
+      replace (leb c v) with true. simpl.
+      replace (leb c (S v)) with true.
+      now rewrite Heqb. 
+      symmetry. apply leb_correct. omega.
+      symmetry. apply leb_correct. omega.
+    * specialize (leb_complete_conv _ _ Heqb); intros.
+      destruct (leb c v) eqn:?; simpl.
+      now rewrite Heqb. 
+      destruct v. easy.
+      replace (leb (c+d) v) with false. easy.
+      symmetry. apply leb_correct_conv. omega.
+  + apply f_equal2; easy.
+  + apply f_equal. specialize (IHT (S c) d). easy.
+Qed.
 
 
-Lemma insert_kind_get_type : forall X e e', insert_kind X e e' -> forall x,
+
+Lemma insert_kind_get_type : forall X e e', insert_kind X e e' -> forall x, 
             get_type x e' = match nat_compare X x with
                               | Lt => option_map (tshift X) (get_type (x-1) e)
                               | Eq => None
@@ -314,16 +332,16 @@ Proof.
   + destruct x; simpl. reflexivity.
     rewrite IHinsert_kind.
     destruct (nat_compare X x) eqn:?; try reflexivity.
-    * apply nat_compare_Lt_lt in Heqc. destruct x. inv Heqc. rewrite <- minus_n_O. replace (S x - 1) with x. simpl.  destruct (get_type x e); [|reflexivity]. simpl. apply f_equal. apply pouet. omega.
+    * apply nat_compare_Lt_lt in Heqc. destruct x. inv Heqc. rewrite <- minus_n_O. replace (S x - 1) with x. simpl.  destruct (get_type x e); [|reflexivity]. simpl. apply f_equal. specialize (tshift_tshift t 0 X). rewrite plus_O_n. easy. omega.
     * apply nat_compare_Gt_gt in Heqc. destruct (get_type x e); [|reflexivity]. simpl. apply f_equal.
-      apply pouet.
+      specialize (tshift_tshift t 0 X). rewrite plus_O_n. easy.
   + destruct x; simpl. admit.
     rewrite IHinsert_kind.
     destruct (nat_compare X x) eqn:?; try reflexivity.
     * apply nat_compare_Lt_lt in Heqc. destruct x. inv Heqc. rewrite <- minus_n_O. replace (S x - 1) with x.
-      simpl.  destruct (get_type x e); [|reflexivity]. simpl. apply f_equal. apply pouet. omega.
+      simpl.  destruct (get_type x e); [|reflexivity]. simpl. apply f_equal. specialize (tshift_tshift t 0 X). rewrite plus_O_n. easy. omega.
     * apply nat_compare_Gt_gt in Heqc. destruct (get_type x e); [|reflexivity]. simpl. apply f_equal.
-      apply pouet.
+      specialize (tshift_tshift t 0 X). rewrite plus_O_n. easy.
 Qed.
 
 
