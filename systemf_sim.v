@@ -30,7 +30,27 @@ Inductive env :=
   | ConsT : typ -> env -> env.
 
 
-Fixpoint get_kind (X:var) (e:env) :=
+(* c=cutoff *)
+Fixpoint tshift (c:nat) (T:typ) :=
+  match T with
+    | TyVar X => if leb c X then TyVar (S X) else T
+    | Arrow T1 T2 => Arrow (tshift c T1) (tshift c T2)
+    | FAll K T => FAll K (tshift (S c) T)
+  end.
+
+
+Fixpoint shift c t : term :=
+  match t with
+    | Var x => if leb c x then Var (S x) else Var x
+    | Lam T t => Lam (tshift c T) (shift (S c) t)
+    | App t1 t2 => App (shift c t1) (shift c t2)
+    | Abs K t => Abs K (shift (S c) t)
+    | AppT t T => AppT (shift c t) (tshift c T)
+  end.
+
+
+
+Fixpoint get_kind (X:var) (e:env) : option kind :=
   match (X, e) with
     | (0, ConsK K _) => Some K
     | (S X, ConsK _ e) => get_kind X e
@@ -41,8 +61,8 @@ Fixpoint get_kind (X:var) (e:env) :=
 Fixpoint get_type (x:var) (e:env) :=
   match (x, e) with
     | (0, ConsT T _) => Some T
-    | (S x, ConsK _ e) => get_type x e
-    | (S x, ConsT _ e) => get_type x e
+    | (S x, ConsK _ e) => option_map (tshift 0) (get_type x e)
+    | (S x, ConsT _ e) => option_map (tshift 0) (get_type x e)
     | _ => None
   end.
 
@@ -57,14 +77,6 @@ with kinding : env -> typ -> kind -> Prop :=
   | KArrow : forall e T1 T2 p q, kinding e T1 p -> kinding e T2 q -> kinding e (Arrow T1 T2) (max p q)
   | KFAll : forall e T p q, kinding (ConsK q e) T p -> kinding e (FAll q T) (S (max p q)).
 
-
-(* c=cutoff *)
-Fixpoint tshift (c:nat) (T:typ) :=
-  match T with
-    | TyVar X => if leb c X then TyVar (S X) else T
-    | Arrow T1 T2 => Arrow (tshift c T1) (tshift c T2)
-    | FAll K T => FAll K (tshift (S c) T)
-  end.
 
 
 
@@ -212,36 +224,9 @@ Qed.
 
 
 (* Weakening *)
-Fixpoint tshift_env c e : env :=
-  match e with
-    | Nil => Nil
-    | ConsK K e => ConsK K (tshift_env c e)
-    | ConsT T e => ConsT (tshift c T) (tshift_env c e)
-  end.
 
 
-Lemma tshift_env_get_kind : forall e c X,
-     get_kind X (tshift_env c e) = get_kind X e.
-Proof.
-  induction e; intros c X; simpl.
-  + reflexivity.
-  + destruct X; simpl. reflexivity. easy.
-  + destruct X; simpl. reflexivity. easy.
-Qed.
 
-Lemma tshift_env_get_type : forall c e X,
-     get_type X (tshift_env c e) = option_map (tshift c) (get_type X e).
-Admitted.
-
-
-Fixpoint shift c t : term :=
-  match t with
-    | Var x => if leb c x then Var (S x) else Var x
-    | Lam T t => Lam (tshift c T) (shift (S c) t)
-    | App t1 t2 => App (shift c t1) (shift c t2)
-    | Abs K t => Abs K (shift (S c) t)
-    | AppT t T => AppT (shift c t) (tshift c T)
-  end.
 
        
 Inductive insert_kind : var -> env -> env -> Prop :=
@@ -250,7 +235,6 @@ Inductive insert_kind : var -> env -> env -> Prop :=
       insert_kind (S X) (ConsK K e) (ConsK K e')
 | BelowT : forall e e' X T, insert_kind X e e' ->
       insert_kind (S X) (ConsT T e) (ConsT (tshift X T) e').
-
 
 
 
@@ -293,68 +277,57 @@ Proof.
   + inv Hins. apply WfConsK. apply WfNil.
   + inv Hins. apply WfConsK. now apply WfConsK.
     apply WfConsK. eapply IHHwf. eassumption.
-  + inversion Hins; subst. apply WfConsK. eapply WfConsT; eassumption. eapply WfConsT. apply IHHwf. assumption. eapply IHHwf0. eassumption.
+  + inv Hins. apply WfConsK. eapply WfConsT; eassumption. eapply WfConsT. apply IHHwf. 
+assumption. eapply IHHwf0. eassumption.
 Qed.
 
 
+
+Lemma pouet : forall T c,
+  tshift 0 (tshift c T) = tshift (S c) (tshift 0 T).
+Admitted.
 
 Lemma insert_kind_get_type : forall X e e', insert_kind X e e' -> forall x,
             get_type x e' = match nat_compare X x with
-                              | Lt => get_type (x-1) e
+                              | Lt => option_map (tshift X) (get_type (x-1) e)
                               | Eq => None
-                              | Gt => option_map (tshift (X-x-1)) (get_type x e) end.
+                              | Gt => option_map (tshift X) (get_type x e) end.
 Proof.
   intros X e e' H. induction H; intros.
-  + destruct x; simpl; [|rewrite <- minus_n_O]; reflexivity.
+  + destruct x; simpl. reflexivity. now rewrite <- minus_n_O.
   + destruct x; simpl. reflexivity.
     rewrite IHinsert_kind.
     destruct (nat_compare X x) eqn:?; try reflexivity.
-    apply nat_compare_Lt_lt in Heqc. destruct x. inv Heqc. rewrite <- minus_n_O. replace (S x - 1) with x. reflexivity. omega.
-  + destruct x; simpl. now rewrite <- minus_n_O.
+    * apply nat_compare_Lt_lt in Heqc. destruct x. inv Heqc. rewrite <- minus_n_O. replace (S x - 1) with x. simpl.  destruct (get_type x e); [|reflexivity]. simpl. apply f_equal. apply pouet. omega.
+    * apply nat_compare_Gt_gt in Heqc. destruct (get_type x e); [|reflexivity]. simpl. apply f_equal.
+      apply pouet.
+  + destruct x; simpl. admit.
     rewrite IHinsert_kind.
     destruct (nat_compare X x) eqn:?; try reflexivity.
-    apply nat_compare_Lt_lt in Heqc. destruct x. inv Heqc. rewrite <- minus_n_O. replace (S x - 1) with x. reflexivity. omega.
+    * apply nat_compare_Lt_lt in Heqc. destruct x. inv Heqc. rewrite <- minus_n_O. replace (S x - 1) with x.
+      simpl.  destruct (get_type x e); [|reflexivity]. simpl. apply f_equal. apply pouet. omega.
+    * apply nat_compare_Gt_gt in Heqc. destruct (get_type x e); [|reflexivity]. simpl. apply f_equal.
+      apply pouet.
 Qed.
 
-
-Lemma insert_kind_get_type2 : forall X e e', insert_kind X e e' -> forall x T, get_type x e = Some T -> (X <= x -> get_type (S x) e' = Some T) /\ (X > x -> get_type x e' = Some (tshift (X-x) T)).
-Proof.
-  intros X e e' H. induction H; intros; split; intros; simpl.
-  + assumption.
-  + inv H0.
-  + destruct x; [inv H1|]. apply IHinsert_kind. easy. omega.
-  + destruct x; [inv H0|]. simpl. apply IHinsert_kind. easy. omega.
-  + destruct x; [inv H1|]. apply IHinsert_kind. easy. omega.
-  + destruct x; simpl. simpl in H0. admit.
-    apply IHinsert_kind. easy. omega.
-Qed.
 
 
 
 
 Lemma insert_kind_typing : forall e t T, typing e t T ->
-       forall X e', insert_kind X e e' -> exists T', typing e' (shift X t) T'.
+       forall X e', insert_kind X e e' -> typing e' (shift X t) (tshift X T).
 Proof.
   intros e t T Ht. induction Ht; intros X e' Hins; simpl.
   + destruct (leb X x) eqn:?.
-    * exists T. constructor. admit.
+    * constructor. eapply insert_kind_wf; eassumption.
       rewrite (insert_kind_get_type _ _ _ Hins (S x)).
       replace (nat_compare X (S x)) with Lt. simpl.
-      now rewrite <- minus_n_O. admit.
-    * exists (tshift (X-x-1) T). constructor. admit.
+      rewrite <- minus_n_O. now rewrite H0. symmetry. 
+      apply nat_compare_lt. apply leb_complete in Heqb. omega.
+    * constructor. eapply insert_kind_wf; eassumption.
       rewrite (insert_kind_get_type _ _ _ Hins (x)).
-      replace (nat_compare X (x)) with Gt. now rewrite H0. admit.
-  + 
-
-
-    induction x. destruct X; [|discriminate].
-    inv H0. destruct e; try discriminate. 
-    admit. admit. admit.
-    * constructor. admit.
-    rewrite (insert_kind_get_type _ _ _ Hins (x)).
-    replace (nat_compare X (x)) with Gt. 
-    rewrite H0. simpl.
-    rewrite <- minus_n_O. rewrite H0. apply f_equal.
+      replace (nat_compare X (x)) with Gt. now rewrite H0. symmetry. 
+      apply nat_compare_gt. apply leb_complete_conv in Heqb. omega.
 
   + constructor. replace (tshift X T2) with (tshift (S X) T2). apply IHHt. now constructor. admit.
 
@@ -363,14 +336,9 @@ Proof.
 
   + constructor. apply IHHt. now constructor.
 
-  + specialize (TAppT e' (shift X t)).
-
-
-specialize (insert_kind_get_type _ _ _ Hins (S x)).
-intro. destruct (nat_compare X x) eqn:?. constructor. admit.
-    
-    replace (nat_compare X (S x)) with Gt. intros.
-    rewrite H1. rewrite H0.
-intro H1. destruct (leb X x) eqn:H2. constructor.
-admit.
-  + apply TLam. apply IHHt. apply BellowT.
+  + replace (tshift X (tsubst 0 T2 T1)) with (tsubst 0 (tshift X T2) (tshift (S X) T1)).
+    apply (TAppT _ _ K). replace (FAll K (tshift (S X) T1)) with (tshift X (FAll K T1)).
+    now apply IHHt. reflexivity.
+    admit.
+    admit.
+Qed.
