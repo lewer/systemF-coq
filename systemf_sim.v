@@ -4,15 +4,27 @@
 (* beq_nat ou eq_nat_dec ? *)
 (* pas grave le kind = nat ? *)
 
+
 Require Export Utf8.
 Require Export Arith.
 Require Export Max.
 Require Export Omega.
 
+
+Ltac inv H := inversion H; try subst; clear H.
+
+
+(** Formalisation du système F *)
+
+(** * Définitions  *)
+
+(**  On utilise des indices de de Bruinj pour repérsenter les termes.*)
+(** [var] est les type des variable (l'indice en fait) et [kind] celui des sortes  *)
 Definition var := nat.
 
 Definition kind := nat.
 
+(** On définit les types et les termes.  *)
 Inductive typ :=
   | TyVar : var -> typ
   | Arrow : typ -> typ -> typ
@@ -25,22 +37,24 @@ Inductive term :=
   | Abs : kind -> term -> term
   | AppT : term -> typ -> term.
 
+(** Un environnement est une liste de déclarations de sortes et de types. *)
 Inductive env :=
   | Nil : env
   | ConsK : kind -> env -> env
   | ConsT : typ -> env -> env.
 
 
+(** [tshift c T] incrémente les variables [>= c] dans le type [T] *)
 (* c=cutoff *)
-Fixpoint tshift (c:nat) (T:typ) :=
+Fixpoint tshift (c:var) (T:typ) : typ :=
   match T with
     | TyVar X => if leb c X then TyVar (S X) else T
     | Arrow T1 T2 => Arrow (tshift c T1) (tshift c T2)
     | FAll K T => FAll K (tshift (S c) T)
   end.
 
-
-Fixpoint shift c t : term :=
+(** [shift c t] incrémente les variables [>= c] dans le terme [t] *)
+Fixpoint shift (c:var) (t:term) : term :=
   match t with
     | Var x => if leb c x then Var (S x) else Var x
     | Lam T t => Lam (tshift c T) (shift (S c) t)
@@ -50,7 +64,8 @@ Fixpoint shift c t : term :=
   end.
 
 
-
+(** [get_kind X e] renvoie la sorte de la variable d'indice [X] dans l'environnement [e].
+Attention aux décalages d'indices. *)
 Fixpoint get_kind (X:var) (e:env) : option kind :=
   match (X, e) with
     | (0, ConsK K _) => Some K
@@ -101,11 +116,7 @@ Inductive typing : env -> term -> typ -> Prop :=
   | TAppT : forall e t K T1 T2, typing e t (FAll K T1) -> kinding e T2 K -> typing e (AppT t T2) (tsubst 0 T2 T1).
 
 
-Lemma kinding_wf : forall e T K, kinding e T K -> wf e.
-Proof.
-  intros e T K H. induction H; try assumption.
-  inversion IHkinding. assumption.
-Qed.
+(** * Cumulativité  *)
 
 Lemma cumulativity : forall T e K1 K2, K1 <= K2 -> kinding e T K1 -> kinding e T K2.
 Proof.
@@ -122,7 +133,8 @@ Proof.
 Qed.
 
 
-(* Question 1.5 - Inférence *)
+(** * Inférence *)
+(** ** Inférence de kind  *)
 Fixpoint infer_kind (e:env) (T:typ) : option kind :=
   match T with
     | TyVar X => get_kind X e
@@ -155,7 +167,7 @@ Proof.
     now symmetry.
 Qed.
 
-(* Question 5 *)
+(** ** Inférence de types  *)
 
 (* On peut décider si deux kinds k et l sont égaux *)
 Lemma eq_kind_dec : forall (k l :kind), {k=l} + {k<>l}.
@@ -224,11 +236,9 @@ Proof.
 Qed.
 
 
-(* Weakening *)
 
 
-
-
+(** * Weakening  et insert_kind *)
        
 Inductive insert_kind : var -> env -> env -> Prop :=
 | Top : forall e K, insert_kind 0 e (ConsK K e)
@@ -238,6 +248,7 @@ Inductive insert_kind : var -> env -> env -> Prop :=
       insert_kind (S X) (ConsT T e) (ConsT (tshift X T) e').
 
 
+(** ** [insert_kind_wf] et [insert_kind_kinding]  *)
 Lemma insert_kind_get_kind : forall X e e', insert_kind X e e' -> forall Y,
                   get_kind Y e = (get_kind (if leb X Y then S Y else Y) e').
 Proof.
@@ -255,12 +266,10 @@ Proof.
     reflexivity. reflexivity.
 Qed.
 
-
+(** On a besoin de faire une induction mutuelle.  *)
 Scheme kinding_ind_mut := Induction for kinding Sort Prop
 with wf_ind_mut := Induction for wf Sort Prop.
 
-
-Ltac inv H := inversion H; try subst; clear H.
 
 
 Lemma insert_kind_wf : forall e, wf e -> forall X e',
@@ -297,6 +306,7 @@ Proof.
 Qed.
 
 
+(** ** [insert_kind_typing]  *)
 
 Lemma tshift_tshift : forall T c d,
   tshift c (tshift (c+d) T) = tshift (S (c+d)) (tshift c T).
@@ -376,3 +386,14 @@ Proof.
     eapply insert_kind_kinding; eassumption.
     admit.
 Qed.
+
+
+
+Definition e := ConsT (Arrow (TyVar 3) (TyVar 0)) 
+                      (ConsK 12
+                             (ConsT (Arrow (TyVar 0) (TyVar 0))
+                                    (ConsK 18
+                                           Nil))).
+
+Lemma a : wf e.
+  unfold e; econstructor; simpl; [.
