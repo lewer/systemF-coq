@@ -76,7 +76,7 @@ Fixpoint get_kind (X:var) (e:env) : option kind :=
 
 Fixpoint get_type (x:var) (e:env) :=
   match (x, e) with
-    | (0, ConsT T _) => Some T
+    | (0, ConsT T _) => Some (tshift 0 T)
     | (S x, ConsK _ e) => option_map (tshift 0) (get_type x e)
     | (S x, ConsT _ e) => option_map (tshift 0) (get_type x e)
     | _ => None
@@ -92,7 +92,6 @@ with kinding : env -> typ -> kind -> Prop :=
   | KVar : forall e X p q, wf e -> get_kind X e = Some p -> (p <= q) -> kinding e (TyVar X) q
   | KArrow : forall e T1 T2 p q, kinding e T1 p -> kinding e T2 q -> kinding e (Arrow T1 T2) (max p q)
   | KFAll : forall e T p q, kinding (ConsK q e) T p -> kinding e (FAll q T) (S (max p q)).
-
 
 
 
@@ -114,6 +113,13 @@ Inductive typing : env -> term -> typ -> Prop :=
   | TApp : forall e t1 t2 T1 T2, typing e t1 (Arrow T1 T2) -> typing e t2 T1 -> typing e (App t1 t2) T2
   | TAbs : forall e t K T, typing (ConsK K e) t T -> typing e (Abs K t) (FAll K T)
   | TAppT : forall e t K T1 T2, typing e t (FAll K T1) -> kinding e T2 K -> typing e (AppT t T2) (tsubst 0 T2 T1).
+
+
+Lemma get_type_typing : forall x e T,
+  wf e -> get_type x e = Some T -> typing e (Var x) T.
+Proof.
+  destruct x; intros; simpl; now constructor.
+Qed.
 
 
 (** * Cumulativité  *)
@@ -335,7 +341,7 @@ Lemma insert_kind_get_type : forall X e e', insert_kind X e e' -> forall x,
             get_type x e' = match nat_compare X x with
                               | Lt => option_map (tshift X) (get_type (x-1) e)
                               | Eq => None
-                              | Gt => option_map (tshift X) (get_type x e) end.
+                              | Gt => option_map (tshift (X)) (get_type x e) end.
 Proof.
   intros X e e' H. induction H; intros.
   + destruct x; simpl. reflexivity. now rewrite <- minus_n_O.
@@ -343,9 +349,8 @@ Proof.
     rewrite IHinsert_kind.
     destruct (nat_compare X x) eqn:?; try reflexivity.
     * apply nat_compare_Lt_lt in Heqc. destruct x. inv Heqc. rewrite <- minus_n_O. replace (S x - 1) with x. simpl.  destruct (get_type x e); [|reflexivity]. simpl. apply f_equal. specialize (tshift_tshift t 0 X). rewrite plus_O_n. easy. omega.
-    * apply nat_compare_Gt_gt in Heqc. destruct (get_type x e); [|reflexivity]. simpl. apply f_equal.
-      specialize (tshift_tshift t 0 X). rewrite plus_O_n. easy.
-  + destruct x; simpl. admit.
+    * apply nat_compare_Gt_gt in Heqc. destruct (get_type x e) as [T|]; [|reflexivity]. simpl. apply f_equal.      specialize (tshift_tshift T 0 X). rewrite plus_O_n. easy.
+  + destruct x; simpl. apply f_equal.  specialize (tshift_tshift T 0 X). rewrite plus_O_n. easy. 
     rewrite IHinsert_kind.
     destruct (nat_compare X x) eqn:?; try reflexivity.
     * apply nat_compare_Lt_lt in Heqc. destruct x. inv Heqc. rewrite <- minus_n_O. replace (S x - 1) with x.
