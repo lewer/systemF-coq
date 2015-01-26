@@ -48,7 +48,7 @@ Inductive env :=
 (* c=cutoff *)
 Fixpoint tshift (c:var) (T:typ) : typ :=
   match T with
-    | TyVar X => if leb c X then TyVar (S X) else T
+    | TyVar X => if leb c X then TyVar (S X) else TyVar X
     | Arrow T1 T2 => Arrow (tshift c T1) (tshift c T2)
     | FAll K T => FAll K (tshift (S c) T)
   end.
@@ -95,13 +95,13 @@ with kinding : env -> typ -> kind -> Prop :=
 
 
 
-(* substitution de X par U dans T *)
+(** Substitution de X par U dans T *)
 Fixpoint tsubst (X:nat) (U:typ) (T:typ) :=
   match T with
     | TyVar Y => match nat_compare X Y with
                    | Eq => U
-                   | Lt => TyVar Y
-                   | Gt => TyVar (Y-1)
+                   | Gt => TyVar Y
+                   | Lt => TyVar (Y-1)
                  end
     | Arrow T1 T2 => Arrow (tsubst X U T1) (tsubst X U T2)
     | FAll K T => FAll K (tsubst (S X) (tshift 0 U) T)
@@ -109,10 +109,54 @@ Fixpoint tsubst (X:nat) (U:typ) (T:typ) :=
 
 Inductive typing : env -> term -> typ -> Prop :=
   | TVar : forall e x T, wf e -> get_type x e = Some T -> typing e (Var x) T
-  | TLam : forall e t T1 T2, typing (ConsT T1 e) t T2 -> typing e (Lam T1 t) (Arrow T1 T2)
+  | TLam : forall e t T1 T2, typing (ConsT T1 e) t (tshift 0 T2) -> typing e (Lam T1 t) (Arrow T1 T2)
   | TApp : forall e t1 t2 T1 T2, typing e t1 (Arrow T1 T2) -> typing e t2 T1 -> typing e (App t1 t2) T2
   | TAbs : forall e t K T, typing (ConsK K e) t T -> typing e (Abs K t) (FAll K T)
   | TAppT : forall e t K T1 T2, typing e t (FAll K T1) -> kinding e T2 K -> typing e (AppT t T2) (tsubst 0 T2 T1).
+
+
+Example typing1 : typing Nil (Abs 12 (Lam (TyVar 0) (Var 0))) (FAll 12 (Arrow (TyVar 0) (TyVar 0))).
+repeat econstructor.
+Qed.
+
+Example typing2 : typing   (ConsT (TyVar 0) (ConsK 5 Nil))   (AppT (Abs 12 (Lam (TyVar 0) (Var 0))) (TyVar 1))   (Arrow (TyVar 1) (TyVar 1)).
+replace (Arrow (TyVar 1) (TyVar 1)) with (tsubst 0 (TyVar 1) (Arrow (TyVar 0) (TyVar 0))); [|reflexivity].
+repeat econstructor.
+Qed.
+
+Example typing3 : typing   (ConsT (TyVar 0) (ConsK 5 Nil))   (App (AppT (Abs 12 (Lam (TyVar 0) (Var 0))) (TyVar 1)) (Var 0))   (TyVar 1).
+apply TApp with (T1 := TyVar 1).
+replace (Arrow (TyVar 1) (TyVar 1)) with (tsubst 0 (TyVar 1) (Arrow (TyVar 0) (TyVar 0))); [|reflexivity].
+repeat econstructor.
+repeat econstructor.
+Qed.
+
+Definition ex := ConsT (Arrow (TyVar 2) (TyVar 0))
+                       (ConsK 15
+                              (ConsT (TyVar 0)
+                                     (ConsK 0 Nil))).
+
+Example wf4 : wf ex.
+repeat econstructor.
+Qed.
+
+Example typing4 : typing ex (App (Var 0) (Var 2)) (TyVar 1).
+repeat econstructor.
+Qed.
+
+Definition ex' := ConsT (Arrow (TyVar 3) (TyVar 1))
+                        (ConsK 17
+                               (ConsK 15
+                                      (ConsT (TyVar 0)
+                                             (ConsK 0 Nil)))).
+
+Example wf4' : wf ex'.
+repeat econstructor.
+Qed.
+
+Example typing4' : typing ex' (App (Var 0) (Var 3)) (TyVar 2).
+repeat econstructor.
+Qed.
 
 
 Lemma get_type_typing : forall x e T,
@@ -122,6 +166,15 @@ Proof.
 Qed.
 
 
+Lemma tsubst_ok : forall v e K U K',
+  kinding (ConsK K' e) (TyVar (S v)) K -> kinding e U K' -> kinding e (tsubst 0 U (TyVar (S v))) K.
+Proof.
+  intros. simpl.
+  inv H. inv H2. econstructor; try eassumption.
+  simpl in H3. now rewrite <- minus_n_O.
+Qed.
+
+  
 (** * Cumulativité  *)
 
 Lemma cumulativity : forall T e K1 K2, K1 <= K2 -> kinding e T K1 -> kinding e T K2.
@@ -210,7 +263,7 @@ Fixpoint infer_type (e:env) (t:term) :=
   end.
 
 
-Lemma infer_type_correct : forall t e T,
+(*Lemma infer_type_correct : forall t e T,
   wf e -> infer_type e t = Some T -> typing e t T.
 Proof.
   induction t  as [v|T1 t|t1 IHt1 t2 IHt2|K t|t IHt T2].
@@ -243,7 +296,7 @@ Qed.
 
 
 
-
+*)
 (** * Weakening  et insert_kind *)
        
 Inductive insert_kind : var -> env -> env -> Prop :=
@@ -361,13 +414,47 @@ Qed.
 
 
 
+Lemma tsubst_tshift : forall T X Y U,
+        tsubst X (tshift (X+Y) U) (tshift (S (X+Y)) T) = tshift (X+Y) (tsubst X U T).
+Proof.
+  induction T; intros; simpl.
+  + destruct v. now destruct X.
+  simpl. rewrite <- minus_n_O.
+  destruct (nat_compare X (S v)) eqn:?; simpl.
+    * apply nat_compare_eq in Heqc. subst X.
+      destruct (leb (S v+Y) v) eqn:?; simpl.
+      apply leb_complete in Heqb. omega.
+      replace (nat_compare v v) with Eq.
+      reflexivity.  symmetry. now apply nat_compare_eq_iff.
+    * apply nat_compare_lt in Heqc.
+      destruct (leb (X+Y) v) eqn:?; simpl.
+      replace (nat_compare X (S(S v))) with Lt.
+      reflexivity. symmetry. apply nat_compare_lt. omega.
+      replace (nat_compare X (S v)) with Lt.
+      now rewrite <- minus_n_O. symmetry. apply nat_compare_lt. omega.
+    * destruct (leb (X+Y) v) eqn:?; simpl.
+      apply nat_compare_gt in Heqc.
+      apply leb_complete in Heqb. omega.
+      rewrite Heqc.
+      apply nat_compare_gt in Heqc.
+      apply leb_complete_conv in Heqb. 
+      destruct (leb (X+Y) (S v)) eqn:?; simpl.
+      apply leb_complete in Heqb0. omega.
+      reflexivity.
+  + apply f_equal2; auto.
+  + apply f_equal. replace (S (X + Y)) with ((S X)+Y); [|omega].
+    rewrite <- IHT. apply f_equal2; [|reflexivity].
+    replace (X + Y) with (0+(X+Y)); [|omega].
+    replace (S X + Y) with (S (0+(X+Y))); [|omega].
+    apply tshift_tshift.
+Qed.
 
-
+                            
 Lemma insert_kind_typing : forall e t T, typing e t T ->
        forall X e', insert_kind X e e' -> typing e' (shift X t) (tshift X T).
 Proof.
-  intros e t T Ht. induction Ht; intros X e' Hins; simpl.
-  + destruct (leb X x) eqn:?.
+  intros e t T Ht. induction Ht; intros X e' Hins.
+  + simpl. destruct (leb X x) eqn:?.
     * constructor. eapply insert_kind_wf; eassumption.
       rewrite (insert_kind_get_type _ _ _ Hins (S x)).
       replace (nat_compare X (S x)) with Lt. simpl.
@@ -378,7 +465,9 @@ Proof.
       replace (nat_compare X (x)) with Gt. now rewrite H0. symmetry. 
       apply nat_compare_gt. apply leb_complete_conv in Heqb. omega.
 
-  + constructor. replace (tshift X T2) with (tshift (S X) T2). apply IHHt. now constructor. admit.
+  + simpl. constructor. specialize (IHHt (S X) (ConsT (tshift X T1) e')). specialize (tshift_tshift T2 0 X). intro Htt.
+    rewrite plus_O_n in Htt. rewrite Htt. apply IHHt.
+    now constructor.
 
   + econstructor. now apply IHHt1.
     now apply IHHt2.
@@ -389,19 +478,10 @@ Proof.
     apply (TAppT _ _ K). replace (FAll K (tshift (S X) T1)) with (tshift X (FAll K T1)).
     now apply IHHt. reflexivity.
     eapply insert_kind_kinding; eassumption.
-    admit.
+    specialize  (tsubst_tshift T1 0 X T2).
+    now rewrite plus_O_n.
 Qed.
 
-
-
-Definition e := ConsT (Arrow (TyVar 3) (TyVar 0)) 
-                      (ConsK 12
-                             (ConsT (Arrow (TyVar 0) (TyVar 0))
-                                    (ConsK 18
-                                           Nil))).
-
-Lemma a : wf e.
-  unfold e; econstructor; simpl; [.
 
 
 
