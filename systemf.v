@@ -484,12 +484,59 @@ Qed.
 
 
 
-
 Inductive env_subst : var -> typ -> env -> env -> Prop :=
-  |SubstNil : forall X T, env_subst X T Nil Nil
-  |SubstSubst : forall X T e, env_subst X T (ConsT (TyVar X) e) (ConsT T e)
+  |SubstSubst : forall T e K, (exists L, kinding e T L)  -> env_subst 0 T (ConsK K e) e
   |SubstConsK : forall X T e e', env_subst X T e e' -> 
-                     forall K, env_subst X T (ConsK K e) (ConsK K e')
+                     forall K, env_subst (S X) (tshift 0 T) (ConsK K e) (ConsK K e')
   |SubstConsT : forall X T e e', env_subst X T e e' ->
-                     forall U, env_subst X T (ConsT U e) (ConsT (tsubst X T U) e').
+                     forall U, env_subst (S X) (tshift 0 T) (ConsT U e) (ConsT (tsubst X T U) e').
+
+Lemma env_subst_get_kind : forall e e' X T, env_subst X T e e' -> forall Y, X>Y -> get_kind Y e = get_kind Y e'. 
+Proof.
+  intros e e' X T H. induction H; intros Y HY.
+  + omega.
+  + destruct Y; [reflexivity | apply IHenv_subst]. omega.
+  + destruct Y; [reflexivity | apply IHenv_subst]. omega.
+Qed.
+
+Lemma env_subst_get_kind2 : forall e e' X T, env_subst X T e e' -> forall Y, X<Y -> get_kind Y e = get_kind (Y-1) e'. 
+Proof.
+  intros e e' X T H. induction H; intros Y HY.
+  + destruct Y. omega. simpl. rewrite <- minus_n_O. reflexivity.
+  + (*destruct Y; [omega |simpl]. rewrite <- minus_n_O. apply IHenv_subst. omega.
+  + destruct Y; [omega | apply IHenv_subst]. omega.
+Qed.*)
+Admitted.
+
+Lemma env_subst_kindable : forall e e' X T, env_subst X T e e' -> exists K, kinding e' T K.
+Proof.
+  intros e e' X T H. induction H.
+  + assumption.
+  + destruct IHenv_subst as [L].
+    exists L. eapply insert_kind_kinding. eassumption.
+    constructor.
+  + destruct IHenv_subst as [L].
+    exists L.
+
+
+
+Lemma env_subst_wf : forall e, wf e -> forall e' X T, env_subst X T e e' -> wf e'.
+Proof.
+  intros e Hwf.
+  induction Hwf as [e Y K K' Hwf HI H H'| | | | | ] using wf_ind_mut with (P := (fun e U K Hk => forall e' X T, env_subst X T e e' -> kinding e' (tsubst X T U) K)); intros e' X T0 Hs.
+  + simpl. destruct (nat_compare X Y) eqn:zozo.
+
+
+  
+
+
+Lemma env_subst_kinding : forall e U K, kinding e U K -> forall e' X T, env_subst X T e e' -> kinding e' (tsubst X T U) K.
+
+induction U as [Y | U1 IH1 U2 IH2 | K T]; intros.
+- simpl. destruct (nat_compare X Y) eqn:zozo.
+  + admit.
+  + inv H. apply (KVar _ _ p). admit. erewrite <- (env_subst_get_kind2 e e' X T H0 Y). eapply H3. admit. assumption. 
+  + inv H. apply (KVar _ _ p). admit. erewrite <- (env_subst_get_kind e e' X T H0 Y). assumption. admit. assumption.
+- 
+
 
