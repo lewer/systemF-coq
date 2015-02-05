@@ -326,43 +326,48 @@ Proof.
 Qed.
 
 (** On a besoin de faire une induction mutuelle.  *)
-Scheme kinding_ind_mut := Induction for kinding Sort Prop
-with wf_ind_mut := Induction for wf Sort Prop.
+Scheme wf_ind_mut := Induction for wf Sort Prop
+with kinding_ind_mut := Induction for kinding Sort Prop.
 
-
-
-Lemma insert_kind_wf : forall e, wf e -> forall X e',
-       insert_kind X e e' -> wf e'.
+Fact wf_kinding_ind_mut :
+ ∀ (P : ∀ e : env, wf e → Prop) (P0 : ∀ (e : env) (t : typ) (k : kind), kinding e t k → Prop),
+   P Nil WfNil
+   → (∀ (K : kind) (e : env) (w : wf e), P e w →
+                      P (ConsK K e) (WfConsK K e w))
+   → (∀ (T : typ) (e : env) (K : kind) (k : kinding e T K), P0 e T K k → ∀ w : wf e, P e w →
+                      P (ConsT T e) (WfConsT T e K k w))
+   → (∀ (e : env) (X : var) (p : kind) (q : nat) (w : wf e), P e w → ∀ (e0 : get_kind X e = Some p) (l : p ≤ q),
+                      P0 e (TyVar X) q (KVar e X p q w e0 l))
+   → (∀ (e : env) (T1 T2 : typ) (p q : kind) (k : kinding e T1 p), P0 e T1 p k → ∀ k0 : kinding e T2 q, P0 e T2 q k0 →
+                      P0 e (Arrow T1 T2) (max p q) (KArrow e T1 T2 p q k k0))
+   → (∀ (e : env) (T : typ) (p q : kind) (k : kinding (ConsK q e) T p), P0 (ConsK q e) T p k →
+                      P0 e (FAll q T) (S (max p q)) (KFAll e T p q k))
+   → (∀ (e : env) (w : wf e), P e w) /\  (∀ (e : env) (t : typ) (k : kind) (k0 : kinding e t k), P0 e t k k0).
 Proof.
-  intros e Hwf.
-  induction Hwf as [e Y K K' Hwf HI H H'| | | | | ] using wf_ind_mut with (P := (fun e T K Hk => forall X e', insert_kind X e e' -> kinding e' (tshift X T) K)); intros X e' Hins; simpl.
-  + specialize (insert_kind_get_kind _ _ _ Hins Y). intros.
-    destruct (leb X Y); eapply KVar; eauto. congruence.
-    congruence.
-  + apply KArrow; auto.
-  + apply KFAll. apply IHHwf. now apply BelowK.
-  + inv Hins. apply WfConsK. apply WfNil.
-  + inv Hins. apply WfConsK. now apply WfConsK.
+  intros. split. 
+  apply (wf_ind_mut P P0); assumption.
+  apply (kinding_ind_mut P P0); assumption.
+Qed.
+
+
+Lemma insert_kind_wf_kinding :
+  (forall e, wf e -> forall X e', insert_kind X e e' -> wf e')
+      /\
+        (forall e T K, kinding e T K -> forall X e', insert_kind X e e' -> kinding e' (tshift X T) K).
+Proof.
+  (* induction 0 using wf_kinding_ind_mut with (P := fun e Hwf => forall X e', insert_kind X e e' -> wf e') (P0 := (fun e T K Hk => forall X e', insert_kind X e e' -> kinding e' (tshift X T) K)). *)
+  apply wf_kinding_ind_mut.
+  + intros X e' Hins. inv Hins. apply WfConsK. apply WfNil.
+  + intros K e w IHHwf X e' Hins. inv Hins. apply WfConsK. now apply WfConsK.
     apply WfConsK. eapply IHHwf. eassumption.
-  + inv Hins. apply WfConsK. eapply WfConsT; eassumption. eapply WfConsT. apply IHHwf. 
+  + intros T e K k IHHwf w IHHwf0 X e' Hins. inv Hins. apply WfConsK. eapply WfConsT; eassumption. eapply WfConsT. apply IHHwf. 
 assumption. eapply IHHwf0. eassumption.
+  + intros e Y p q w IHHwf H H' X e' Hins. specialize (insert_kind_get_kind _ _ _ Hins Y). intros. simpl. destruct (leb X Y); eapply KVar; eauto. congruence.
+    congruence.
+  + intros e T1 T2 p q k IHHwf Hk IHHwf0 X e' Hins. apply KArrow; auto.
+  + intros e T p q k IHHwf X e' Hins. apply KFAll. apply IHHwf. now apply BelowK.
 Qed.
 
-
-Lemma insert_kind_kinding : forall e T K, kinding e T K ->
-              forall X e', insert_kind X e e' -> kinding e' (tshift X T) K.
-Proof.
-  intros e T K Hk.
-  induction Hk; simpl; intros X0 e' Hins.
-  + rewrite (insert_kind_get_kind _ _ _ Hins X) in H0.
-    destruct (leb X0 X).
-    - apply (KVar _ _ p); try easy.
-      eapply insert_kind_wf; eassumption.
-    - apply (KVar _ _ p); try easy.
-      eapply insert_kind_wf; eassumption.
-  + apply KArrow; auto.
-  + apply KFAll. apply IHHk. apply BelowK. assumption.
-Qed.
 
 
 (** ** [insert_kind_typing]  *)
@@ -455,12 +460,12 @@ Lemma insert_kind_typing : forall e t T, typing e t T ->
 Proof.
   intros e t T Ht. induction Ht; intros X e' Hins.
   + simpl. destruct (leb X x) eqn:?.
-    * constructor. eapply insert_kind_wf; eassumption.
+    * constructor. eapply insert_kind_wf_kinding; eassumption.
       rewrite (insert_kind_get_type _ _ _ Hins (S x)).
       replace (nat_compare X (S x)) with Lt. simpl.
       rewrite <- minus_n_O. now rewrite H0. symmetry. 
       apply nat_compare_lt. apply leb_complete in Heqb. omega.
-    * constructor. eapply insert_kind_wf; eassumption.
+    * constructor. eapply insert_kind_wf_kinding; eassumption.
       rewrite (insert_kind_get_type _ _ _ Hins (x)).
       replace (nat_compare X (x)) with Gt. now rewrite H0. symmetry. 
       apply nat_compare_gt. apply leb_complete_conv in Heqb. omega.
@@ -477,7 +482,7 @@ Proof.
   + replace (tshift X (tsubst 0 T2 T1)) with (tsubst 0 (tshift X T2) (tshift (S X) T1)).
     apply (TAppT _ _ K). replace (FAll K (tshift (S X) T1)) with (tshift X (FAll K T1)).
     now apply IHHt. reflexivity.
-    eapply insert_kind_kinding; eassumption.
+    eapply insert_kind_wf_kinding; eassumption.
     specialize  (tsubst_tshift T1 0 X T2).
     now rewrite plus_O_n.
 Qed.
@@ -485,13 +490,14 @@ Qed.
 
 
 Inductive env_subst : var -> typ -> env -> env -> Prop :=
-  |SubstSubst : forall T e K, (exists L, kinding e T L)  -> env_subst 0 T (ConsK K e) e
+  |SubstSubst : forall T e K, kinding e T K  -> env_subst 0 T (ConsK K e) e
   |SubstConsK : forall X T e e', env_subst X T e e' -> 
                      forall K, env_subst (S X) (tshift 0 T) (ConsK K e) (ConsK K e')
   |SubstConsT : forall X T e e', env_subst X T e e' ->
                      forall U, env_subst (S X) (tshift 0 T) (ConsT U e) (ConsT (tsubst X T U) e').
 
-Lemma env_subst_get_kind : forall e e' X T, env_subst X T e e' -> forall Y, X>Y -> get_kind Y e = get_kind Y e'. 
+
+Lemma env_subst_get_kind_gt : forall e e' X T, env_subst X T e e' -> forall Y, X>Y -> get_kind Y e = get_kind Y e'. 
 Proof.
   intros e e' X T H. induction H; intros Y HY.
   + omega.
@@ -499,44 +505,81 @@ Proof.
   + destruct Y; [reflexivity | apply IHenv_subst]. omega.
 Qed.
 
-Lemma env_subst_get_kind2 : forall e e' X T, env_subst X T e e' -> forall Y, X<Y -> get_kind Y e = get_kind (Y-1) e'. 
+Lemma env_subst_get_kind_lt : forall e e' X T, env_subst X T e e' -> forall Y, X<Y -> get_kind Y e = get_kind (Y-1) e'. 
 Proof.
   intros e e' X T H. induction H; intros Y HY.
   + destruct Y. omega. simpl. rewrite <- minus_n_O. reflexivity.
-  + (*destruct Y; [omega |simpl]. rewrite <- minus_n_O. apply IHenv_subst. omega.
-  + destruct Y; [omega | apply IHenv_subst]. omega.
-Qed.*)
+  + destruct Y; [omega |simpl]. rewrite <- minus_n_O. destruct Y; [omega |]. rewrite (IHenv_subst (S Y)). simpl. now rewrite <- minus_n_O. omega.
+  + destruct Y; [omega | simpl].  rewrite <- minus_n_O. destruct Y; [omega |]. rewrite (IHenv_subst (S Y)). simpl. now rewrite <- minus_n_O. omega.
+Qed.
+
+(*
+Inductive insert_type : var -> env -> env -> Prop :=
+| TTop : forall e T K, kinding e T K -> insert_type 0 e (ConsT T e)
+| BelowK : forall e e' X K, insert_type X e e' ->
+      insert_type (S X) (ConsK K e) (ConsK K e')
+| BelowT : forall e e' X T, insert_type X e e' ->
+      insert_type (S X) (ConsT T e) (ConsT (tshift X T) e').
+*)
+
+
+
+
+Lemma kinding_ConsT : forall e T K, kinding e T K -> forall U, wf (ConsT U e) -> kinding (ConsT U e) (tshift 0 T) K.
+Proof.
+  intros e T K H. induction H; intros; simpl.
+  + econstructor; eassumption.
+  + constructor; auto.
+  + constructor.
 Admitted.
 
-Lemma env_subst_kindable : forall e e' X T, env_subst X T e e' -> exists K, kinding e' T K.
+
+
+
+Lemma kinding_wf : forall e T K, kinding e T K -> wf e.
 Proof.
-  intros e e' X T H. induction H.
-  + assumption.
-  + destruct IHenv_subst as [L].
-    exists L. eapply insert_kind_kinding. eassumption.
+  intros e T K H. induction H; try assumption.
+  inversion IHkinding. assumption.
+Qed.
+
+
+Lemma env_subst_kindable : forall e e' X T K, env_subst X T e e' -> wf e -> get_kind X e = Some K -> kinding e' T K.
+Proof.
+  intros e e' X T K H Hwf Heq. induction H.
+  + now inv Heq.
+  + eapply insert_kind_wf_kinding.
+    eapply IHenv_subst. now inv Hwf. assumption.
     constructor.
-  + destruct IHenv_subst as [L].
-    exists L.
+  + eapply kinding_ConsT.
+    eapply IHenv_subst. now inv Hwf. assumption.
+    apply (WfConsT _ _ K). admit.
+    inv H0. now apply (kinding_wf e' T L).
+Qed.
 
 
-
-Lemma env_subst_wf : forall e, wf e -> forall e' X T, env_subst X T e e' -> wf e'.
+Lemma env_subst_wf :
+  (forall e, wf e -> forall e' X T, env_subst X T e e' -> wf e')
+   /\
+    (forall e U K, kinding e U K -> forall e' X T, env_subst X T e e' -> kinding e' (tsubst X T U) K).
 Proof.
-  intros e Hwf.
-  induction Hwf as [e Y K K' Hwf HI H H'| | | | | ] using wf_ind_mut with (P := (fun e U K Hk => forall e' X T, env_subst X T e e' -> kinding e' (tsubst X T U) K)); intros e' X T0 Hs.
-  + simpl. destruct (nat_compare X Y) eqn:zozo.
-
-
-  
-
-
-Lemma env_subst_kinding : forall e U K, kinding e U K -> forall e' X T, env_subst X T e e' -> kinding e' (tsubst X T U) K.
-
-induction U as [Y | U1 IH1 U2 IH2 | K T]; intros.
-- simpl. destruct (nat_compare X Y) eqn:zozo.
-  + admit.
-  + inv H. apply (KVar _ _ p). admit. erewrite <- (env_subst_get_kind2 e e' X T H0 Y). eapply H3. admit. assumption. 
-  + inv H. apply (KVar _ _ p). admit. erewrite <- (env_subst_get_kind e e' X T H0 Y). assumption. admit. assumption.
-- 
-
-
+  apply wf_kinding_ind_mut.
+  + intros e' X T H. inv H.
+  + intros K e Hwf IH e' X T H. inv H.
+    - assumption.
+    - constructor. eapply IH. eassumption.
+  + intros U e K k IH Hwf IH0 e' X T H. inv H.
+    econstructor. now apply IH. eapply IH0. eassumption.
+  + intros e Y p q Hwf IH eq l e' X T H. simpl.
+    destruct (nat_compare X Y) eqn:eq2.
+    - admit.
+    - econstructor; try eassumption. eapply IH; eassumption.
+      erewrite <- env_subst_get_kind_lt; try eassumption.
+      now apply nat_compare_lt in eq2.
+    - econstructor; try eassumption. eapply IH; eassumption.
+      erewrite <- env_subst_get_kind_gt; try eassumption.
+      now apply nat_compare_gt in eq2.
+  + intros e U1 U2 p q Hk1 IH1 Hk2 IH2 e' X T H. simpl.
+    constructor; auto.
+  + intros e U p q Hk IH e' X T H. simpl.
+    constructor. apply IH. now constructor.
+Qed.
