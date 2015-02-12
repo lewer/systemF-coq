@@ -552,10 +552,12 @@ Proof.
     constructor.
   + eapply kinding_ConsT.
     eapply IHenv_subst. now inv Hwf. assumption.
+Admitted.
+(*
     apply (WfConsT _ _ K). admit.
-    inv H0. now apply (kinding_wf e' T L).
+    inv H. now apply (kinding_wf e' T L).
 Qed.
-
+*)
 
 Lemma env_subst_wf :
   (forall e, wf e -> forall e' X T, env_subst X T e e' -> wf e')
