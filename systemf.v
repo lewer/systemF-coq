@@ -585,3 +585,85 @@ Proof.
   + intros e U p q Hk IH e' X T H. simpl.
     constructor. apply IH. now constructor.
 Qed.
+
+
+Definition kindable e T := exists K, kinding e T K.
+
+
+Lemma kinding_ConsK : forall e T K L,
+                         kinding (ConsK L e) (tshift 0 T) K <-> kinding e T K.
+Admitted.
+
+Lemma kinding_ConsT2 : forall e U T K,
+                         kinding (ConsT U e) (tshift 0 T) K <-> kinding e T K.
+Admitted.
+
+
+Fixpoint remove_var x e :=
+  match e with
+    | Nil => Nil
+    | ConsK K e => if (beq_nat x 0) then e else ConsK K (remove_var (x-1) e)
+    | ConsT T e => if (beq_nat x 0) then e else ConsT T (remove_var (x-1) e)
+  end.
+
+
+Lemma remove_var_kinding : forall x e T T' K,
+                             get_type x e = Some T' -> kinding e (tshift x T) K -> kinding (remove_var x e) T K.
+Proof.
+  induction x; intros.
+  + destruct e; simpl in H; try discriminate; inv H.
+    simpl. eapply kinding_ConsT2. eassumption.
+  + destruct e; simpl in H; try discriminate;
+    simpl; rewrite <- minus_n_O.
+Admitted.
+
+
+
+Lemma get_type_wf : forall x e T,
+                      wf e -> get_type x e = Some T -> kindable e T.
+Proof.
+  induction x; intros.
+  + destruct e; try discriminate.
+    inv H0. inv H. exists K.
+    now apply kinding_ConsT2.
+  + destruct e; try discriminate. simpl in H0.
+    destruct (get_type x e) eqn:eq; try discriminate.
+    inv H0. apply IHx. assumption.
+Admitted.
+  
+  
+Lemma typing_wf : forall e t T, typing e t T -> wf e.
+Proof.
+  intros e t T H. induction H; auto.
+  now inv IHtyping.
+  now inv IHtyping.
+Qed.
+
+Lemma tsubst_kinding : forall e' T K, kinding e' T K ->
+                                      forall X e L U, insert_kind X e e' -> get_kind X e' = Some L -> kinding e U L -> kinding e (tsubst X U T) K.
+Proof.
+  induction 1; intros; simpl.
+  + admit.
+  + constructor; eauto.
+  + constructor.
+Admitted.
+
+
+      
+
+Lemma regularity : forall e t T,
+                     typing e t T -> kindable e T.
+Proof.
+  intros e t T H. induction H.
+  + now apply (get_type_wf x).
+  + specialize (typing_wf _ _ _ H). intros Ht; inv Ht.
+    inv IHtyping.
+    exists (max K x). constructor. assumption.
+    eapply kinding_ConsT2. eassumption.
+  + inv IHtyping1. inv H1. now exists q.
+  + inv IHtyping. exists (S (max x K)). constructor. assumption.
+  + inv IHtyping. inv H1. eexists. eapply tsubst_kinding.
+    econstructor. reflexivity. eassumption. assumption.
+Qed.
+ 
+    
