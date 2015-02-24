@@ -5,6 +5,10 @@ Require Export Omega.
 
 Ltac inv H := inversion H; try subst; clear H.
 
+Ltac comp :=
+  rewrite ?leb_iff in *; rewrite ?leb_iff_conv in *;
+  rewrite <- ?nat_compare_lt in *; rewrite <- ?nat_compare_gt in *; rewrite ?nat_compare_eq_iff in *.
+
 (** Formalisation du système F ! *)
 
 (** * Définitions  *)

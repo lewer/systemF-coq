@@ -1,5 +1,13 @@
 all:
-	rm -rf ./html/*
-	coqc systemf.v
-	coqdoc -utf8 -g --no-index -d html systemf.v
-	scp html/systemf.html sboul434@ssh.eleves.ens-rennes.fr:/home/sboul434/public_html/systemf/index.html
+	coqc F01_Defs.v F02_Inference.v F03_Insert_kind.v F04_Env_subst.v F05_Remove_var.v F06_Regularity.v
+
+doc:
+	rm -rf html
+	mkdir html
+	coqdoc -utf8 -g -d html -toc F01_Defs.v F02_Inference.v F03_Insert_kind.v F04_Env_subst.v F05_Remove_var.v F06_Regularity.v
+
+ssh: doc
+	scp html/* sboul434@ssh.eleves.ens-rennes.fr:/home/sboul434/public_html/systemf/
+
+clean:
+	rm -f *.vo *.glob *~

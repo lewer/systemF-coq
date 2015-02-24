@@ -24,11 +24,19 @@ Proof.
 Qed.
 
 
-Lemma tshift_minus_tshift : forall T x, (* todo *)
+Lemma tshift_minus_tshift : forall T x,
                               tshift_minus x (tshift x T) = T.
-Admitted.
-
-
+Proof.
+  induction T; intros x; simpl.
+  + destruct (leb x v) eqn:?; comp; simpl. 
+    destruct (leb x (S v)) eqn:?; comp.
+    now rewrite <- minus_n_O. omega.
+    destruct (leb x v) eqn:?; comp; auto; omega.
+  + apply f_equal2; auto.
+  + apply f_equal; auto.
+Qed.
+        
+    
 Lemma regularity : forall e t T,
                      typing e t T -> kindable e T.
 Proof.
