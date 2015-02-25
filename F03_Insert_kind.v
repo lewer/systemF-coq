@@ -34,7 +34,6 @@ Lemma insert_kind_wf_kinding :
       /\
         (forall e T K, kinding e T K -> forall X e', insert_kind X e e' -> kinding e' (tshift X T) K).
 Proof.
-  (* induction 0 using wf_kinding_ind_mut with (P := fun e Hwf => forall X e', insert_kind X e e' -> wf e') (P0 := (fun e T K Hk => forall X e', insert_kind X e e' -> kinding e' (tshift X T) K)). *)
   apply wf_kinding_ind_mut.
   + intros X e' Hins. inv Hins. apply WfConsK. apply WfNil.
   + intros K e w IHHwf X e' Hins. inv Hins. apply WfConsK. now apply WfConsK.

@@ -9,6 +9,9 @@ Ltac comp :=
   rewrite ?leb_iff in *; rewrite ?leb_iff_conv in *;
   rewrite <- ?nat_compare_lt in *; rewrite <- ?nat_compare_gt in *; rewrite ?nat_compare_eq_iff in *.
 
+Ltac mysimpl :=
+  simpl; rewrite <- ?minus_n_O; rewrite ?plus_n_O; simpl.
+
 (** Formalisation du système F ! *)
 
 (** * Définitions  *)
@@ -165,21 +168,16 @@ Lemma tshift_tshift : forall T c d,
   tshift c (tshift (c+d) T) = tshift (S (c+d)) (tshift c T).
 Proof.
   induction T; intros; simpl.
-  + destruct (leb (c+d) v) eqn:?; simpl.
-    * specialize (leb_complete _ _ Heqb); intros.
-      replace (leb c v) with true. simpl.
-      replace (leb c (S v)) with true.
-      now rewrite Heqb. 
-      symmetry. apply leb_correct. omega.
-      symmetry. apply leb_correct. omega.
-    * specialize (leb_complete_conv _ _ Heqb); intros.
-      destruct (leb c v) eqn:?; simpl.
-      now rewrite Heqb. 
-      destruct v. easy.
-      replace (leb (c+d) v) with false. easy.
-      symmetry. apply leb_correct_conv. omega.
-  + apply f_equal2; easy.
-  + apply f_equal. specialize (IHT (S c) d). easy.
+  + destruct (leb (c+d) v) eqn:?; simpl; comp.
+    * destruct (leb c v) eqn:?; comp; [simpl|omega].
+      destruct (leb c (S v)) eqn:?; comp; [simpl|omega].
+      destruct (leb (c+d) v) eqn:?; comp; [reflexivity|omega].
+    * destruct (leb c v) eqn:?; comp. simpl.
+      destruct (leb (c+d) v) eqn:?; comp; [omega|reflexivity].
+      unfold tshift.
+      destruct (leb (S (c+d)) v) eqn:?; comp; [omega|reflexivity]. 
+  + now apply f_equal2.
+  + apply f_equal. now specialize (IHT (S c) d).
 Qed.
 
 
@@ -188,27 +186,18 @@ Lemma tsubst_tshift : forall T X Y U,
 Proof.
   induction T; intros; simpl.
   + destruct v. now destruct X.
-  simpl. rewrite <- minus_n_O.
-  destruct (nat_compare X (S v)) eqn:?; simpl.
-    * apply nat_compare_eq in Heqc. subst X.
-      destruct (leb (S v+Y) v) eqn:?; simpl.
-      apply leb_complete in Heqb. omega.
-      replace (nat_compare v v) with Eq.
-      reflexivity.  symmetry. now apply nat_compare_eq_iff.
-    * apply nat_compare_lt in Heqc.
-      destruct (leb (X+Y) v) eqn:?; simpl.
-      replace (nat_compare X (S(S v))) with Lt.
-      reflexivity. symmetry. apply nat_compare_lt. omega.
-      replace (nat_compare X (S v)) with Lt.
-      now rewrite <- minus_n_O. symmetry. apply nat_compare_lt. omega.
-    * destruct (leb (X+Y) v) eqn:?; simpl.
-      apply nat_compare_gt in Heqc.
-      apply leb_complete in Heqb. omega.
-      rewrite Heqc.
-      apply nat_compare_gt in Heqc.
-      apply leb_complete_conv in Heqb. 
-      destruct (leb (X+Y) (S v)) eqn:?; simpl.
-      apply leb_complete in Heqb0. omega.
+    mysimpl. destruct (nat_compare X (S v)) eqn:?; comp; simpl.
+    * subst X. destruct (leb (S v+Y) v) eqn:?; comp; try omega.
+      simpl. destruct (nat_compare v v) eqn:?; comp; try omega.
+      reflexivity.
+    * destruct (leb (X+Y) v) eqn:?; comp; simpl.
+      destruct (nat_compare X (S (S v))) eqn:?; comp; try omega.
+      reflexivity.
+      destruct (nat_compare X (S v)) eqn:?; comp; try omega.
+      now mysimpl.
+    * destruct (leb (X+Y) v) eqn:?; comp; simpl; try omega.
+      destruct (nat_compare X (S v)) eqn:?; comp; try omega.
+      destruct (leb (X+Y) (S v)) eqn:?; comp; try omega.
       reflexivity.
   + apply f_equal2; auto.
   + apply f_equal. replace (S (X + Y)) with ((S X)+Y); [|omega].
@@ -217,3 +206,58 @@ Proof.
     replace (S X + Y) with (S (0+(X+Y))); [|omega].
     apply tshift_tshift.
 Qed.
+
+
+Fixpoint tshift_minus (x : var) (T : typ) {struct T} : typ :=
+  match T with
+    | TyVar X => if leb x X then TyVar (X-1) else TyVar X
+    | Arrow T1 T2 => Arrow (tshift_minus x T1) (tshift_minus x T2)
+    | FAll K T0 => FAll K (tshift_minus (S x) T0)
+  end.
+
+
+Lemma tshift_minus_tshift : forall T x,
+                              tshift_minus x (tshift x T) = T.
+Proof.
+  induction T; intros x; simpl.
+  + destruct (leb x v) eqn:?; comp; simpl. 
+    destruct (leb x (S v)) eqn:?; comp.
+    now rewrite <- minus_n_O. omega.
+    destruct (leb x v) eqn:?; comp; auto; omega.
+  + apply f_equal2; auto.
+  + apply f_equal; auto.
+Qed.
+        
+
+
+
+
+(*
+Besoin pour inférence mais pas bons...
+
+Lemma tshift_tshift_minus_pos : forall T x, x>0 ->
+                                  tshift (x-1) (tshift_minus x T) = T.
+Proof.
+  induction T; intros; simpl.
+  + destruct x; [omega|].
+    destruct (leb (S x) v) eqn:?; comp; mysimpl.
+    destruct v; [omega|]. mysimpl.
+    destruct (leb x v) eqn:?; comp; [reflexivity|omega].
+    destruct (leb x v) eqn:?; comp. ; [omega|].
+
+  + inv H. apply f_equal2; eauto.
+  + inv H. apply f_equal; auto.
+Qed.
+
+Lemma tshift_tshift_minus : forall T e U K,
+                              kinding (ConsT U e) T K ->
+                              tshift 0 (tshift_minus 0 T) = T.
+Proof.
+  induction T; intros; simpl.
+  + destruct v; mysimpl.
+    - admit.
+    - reflexivity.
+  + inv H. apply f_equal2; eauto.
+  + inv H. apply f_equal; auto.
+Qed.
+*)

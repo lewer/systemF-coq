@@ -1,13 +1,6 @@
 Require Import "F01_Defs".
 
 
-Fixpoint tshift_minus (x : var) (T : typ) {struct T} : typ :=
-  match T with
-    | TyVar X => if leb x X then TyVar (X-1) else TyVar X
-    | Arrow T1 T2 => Arrow (tshift_minus x T1) (tshift_minus x T2)
-    | FAll K T0 => FAll K (tshift_minus (S x) T0)
-  end.
-
 
 Fixpoint remove_var x e {struct e} : env :=
   match e with
