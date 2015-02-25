@@ -1,4 +1,5 @@
 Require Import "F01_Defs".
+Require Import "F06_Regularity".
 
 (** * Inférence de kind  *)
 Fixpoint infer_kind (e:env) (T:typ) : option kind :=
@@ -60,6 +61,7 @@ Fixpoint infer_type (e:env) (t:term) :=
   end.
 
 
+(* c'est nul, on est obligé d'utiliser regularity à cause du t_minus à cause qu'on a foiré typing, bref.. *)
 Lemma infer_type_correct : forall t e T,
   wf e -> infer_type e t = Some T -> typing e t T.
 Proof.
@@ -69,8 +71,11 @@ Proof.
     destruct (infer_type (ConsT T1 e) t) eqn:?; [|discriminate].
     inv H. apply TLam. apply IHt; [|auto].
     apply (WfConsT _ _ k). now apply infer_kind_correct. assumption.
-    assert (tshift 0 (tshift_minus 0 t0) = t0). admit.
-    rewrite H. assumption.
+    pose Heqo0. apply IHt in e0. apply regularity in e0.
+    destruct e0.
+    eapply tshift_tshift_minus in H. rewrite H. assumption. reflexivity.
+    econstructor. apply infer_kind_correct in Heqo; eassumption.
+    assumption.
   + destruct (infer_type e t1) as [T1|] eqn:?; [|discriminate].
     destruct T1 as [|T1 T2|]; try discriminate.
     destruct (infer_type e t2) as [T1'|] eqn:?; [|discriminate].
@@ -81,12 +86,12 @@ Proof.
   + destruct (infer_type (ConsK K e) t) as [T1|] eqn:?; [|discriminate].
     inversion H. apply TAbs.
     apply IHt. now apply WfConsK. congruence.
-  +  destruct (infer_kind e T2) as [K2|] eqn:?; [|discriminate].
-     destruct (infer_type e t) as [T1|] eqn:?; [|discriminate].
-     destruct T1 as [| |K1 T1]; try discriminate.
-     destruct (leb K2 K1) eqn:?; [|discriminate]; comp.
-     inversion H. apply (TAppT _ _ K1).
-     - apply IHt; congruence.
-     - apply (cumulativity _ _ K2). assumption.
-       apply infer_kind_correct; congruence.
+  + destruct (infer_kind e T2) as [K2|] eqn:?; [|discriminate].
+    destruct (infer_type e t) as [T1|] eqn:?; [|discriminate].
+    destruct T1 as [| |K1 T1]; try discriminate.
+    destruct (leb K2 K1) eqn:?; [|discriminate]; comp.
+    inversion H. apply (TAppT _ _ K1).
+    - apply IHt; congruence.
+    - apply (cumulativity _ _ K2). assumption.
+      apply infer_kind_correct; congruence.
 Qed.

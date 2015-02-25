@@ -47,18 +47,6 @@ Qed.
 
 
 
-Lemma get_get : forall X e x K T, get_kind X e = Some K -> get_type x e = Some T -> X<>x.
-Proof.
-  induction X; intros.
-  + intros eq. subst x. destruct e; discriminate.
-  + intros eq. subst x. destruct e; try discriminate.
-    - simpl in H0. destruct (get_type X e) eqn:?; [|discriminate].
-      eapply IHX. eassumption. eassumption. reflexivity.
-    - simpl in H0. destruct (get_type X e) eqn:?; [|discriminate].
-      eapply IHX. eassumption. eassumption. reflexivity.
-Qed.
-
-
 
 Lemma remove_var_wf_kinding : 
   (forall e, wf e -> forall x U, get_type x e = Some U -> wf (remove_var x e))
@@ -87,3 +75,9 @@ Proof.
   + constructor. eapply (H (S x)). simpl.
     rewrite H0. reflexivity.
 Qed.
+
+
+Lemma kinding_remove_var : forall e x T K,
+                           kinding (remove_var x e) T K -> kinding e (tshift x T) K.
+Admitted.
+

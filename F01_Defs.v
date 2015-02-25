@@ -230,34 +230,35 @@ Qed.
         
 
 
-
-
-(*
-Besoin pour inférence mais pas bons...
-
-Lemma tshift_tshift_minus_pos : forall T x, x>0 ->
-                                  tshift (x-1) (tshift_minus x T) = T.
+Lemma get_get : forall X e x K T, get_kind X e = Some K -> get_type x e = Some T -> X<>x.
 Proof.
-  induction T; intros; simpl.
-  + destruct x; [omega|].
-    destruct (leb (S x) v) eqn:?; comp; mysimpl.
-    destruct v; [omega|]. mysimpl.
-    destruct (leb x v) eqn:?; comp; [reflexivity|omega].
-    destruct (leb x v) eqn:?; comp. ; [omega|].
-
-  + inv H. apply f_equal2; eauto.
-  + inv H. apply f_equal; auto.
+  induction X; intros.
+  + intros eq. subst x. destruct e; discriminate.
+  + intros eq. subst x. destruct e; try discriminate.
+    - simpl in H0. destruct (get_type X e) eqn:?; [|discriminate].
+      eapply IHX. eassumption. eassumption. reflexivity.
+    - simpl in H0. destruct (get_type X e) eqn:?; [|discriminate].
+      eapply IHX. eassumption. eassumption. reflexivity.
 Qed.
 
-Lemma tshift_tshift_minus : forall T e U K,
-                              kinding (ConsT U e) T K ->
-                              tshift 0 (tshift_minus 0 T) = T.
+
+
+Lemma tshift_tshift_minus : forall T e x U K,
+                              get_type x e = Some U -> kinding e T K ->
+                              tshift x (tshift_minus x T) = T.
 Proof.
   induction T; intros; simpl.
   + destruct v; mysimpl.
-    - admit.
-    - reflexivity.
-  + inv H. apply f_equal2; eauto.
-  + inv H. apply f_equal; auto.
+    - destruct x; simpl. inv H0.
+      now contradiction (get_get _ _ _ _ _ H3 H). reflexivity.
+    - destruct (leb x (S v)) eqn:?; comp; simpl.
+      destruct (leb x v) eqn:?; comp; simpl.
+      reflexivity.
+      inv H0. contradiction (get_get _ _ _ _ _ H3 H).
+      apply le_antisym; omega.
+      destruct (leb x (S v)) eqn:?; comp; simpl.
+      omega. reflexivity.
+  + inv H. inv H0. apply f_equal2; eauto.
+  + inv H. inv H0. apply f_equal. eapply IHT; try eassumption.
+    simpl. rewrite H2. reflexivity.
 Qed.
-*)

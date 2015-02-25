@@ -3,17 +3,25 @@ Require Import "F03_Insert_kind".
 Require Import "F05_Remove_var".
 
 
-Lemma get_type_wf : forall x e T, (* todo *)
+Lemma get_type_wf : forall x e T,
                       wf e -> get_type x e = Some T -> kindable e T.
 Proof.
   induction x; intros.
   + destruct e; try discriminate.
     inv H0. inv H. exists K.
-    (* now apply kinding_ConsT2.
-  + destruct e; try discriminate. simpl in H0.
-    destruct (get_type x e) eqn:eq; try discriminate.
-    inv H0. apply IHx. assumption.*)
-Admitted.
+    replace e with (remove_var 0 (ConsT t e)) in H2; [|reflexivity].
+    now apply kinding_remove_var.
+  + destruct e; try discriminate; simpl in H0.
+    - destruct (get_type x e) eqn:eq; try discriminate.
+      inv H0. inv H. apply IHx in eq; [|assumption].
+      inv eq. exists x0. eapply insert_kind_wf_kinding.
+      eassumption. constructor.
+    - destruct (get_type x e) eqn:eq; try discriminate.
+      inv H0. inv H. apply IHx in eq; [|assumption].
+      inv eq. exists x0.
+      replace e with (remove_var 0 (ConsT t e)) in H; [|reflexivity].
+      now apply kinding_remove_var.
+Qed.
 
 
 Lemma typing_wf : forall e t T, typing e t T -> wf e.
