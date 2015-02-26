@@ -77,7 +77,24 @@ Proof.
 Qed.
 
 
+
+
 Lemma kinding_remove_var : forall e x T K,
                            kinding (remove_var x e) T K -> kinding e (tshift x T) K.
+Admitted.
+
+
+Lemma wf_remove_var : forall e, wf e ->
+  forall e' x T K, e = remove_var x e' -> get_type x e' = Some T -> kinding e' T K -> wf e'.
+Proof.
+  induction 1; intros.
+  + destruct e'; econstructor.
+    destruct x; discriminate.
+    destruct x; [|discriminate].
+    simpl in H. subst e'. inv H0.
+    inv H1. destruct X; try discriminate.
+    destruct X; try discriminate.
+    destruct t; try discriminate.
+    inv H. econstructor. admit.
 Admitted.
 
