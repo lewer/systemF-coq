@@ -117,11 +117,11 @@ Proof.
   induction T as [Y|T1 IHT1 T2 IHT2|k T]; intros e' K HkT X e L U Hik Hgk HkU.
   - destruct (nat_compare X Y) eqn:H.
     + simpl. rewrite H. destruct (le_lt_dec K L) as [H1|H1].
-      inversion HkT.
-      (* comme X=Y, H3 et Hgk donnent p=L, donc HkU:kinding e U p
-       et avec cumulativity et H5 c'est bon *)
-      admit.
-      apply cumulativity with L. omega. assumption.
+      inversion HkT. comp.
+      replace L with p in HkU.
+      now apply (cumulativity U e p K).
+      rewrite <- H in H3. rewrite H3 in Hgk. now injection Hgk.
+      apply (cumulativity U e L K). omega. assumption.
     + simpl. rewrite H. inversion HkT. comp. apply KVar with p.
       apply (kinding_wf e U L HkU).
       rewrite (insert_kind_get_kind X e e'). replace (leb X (Y-1)) with true. 
