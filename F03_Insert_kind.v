@@ -105,13 +105,44 @@ Proof.
     now rewrite plus_O_n.
 Qed.
 
+Lemma kinding_wf : forall e T K, kinding e T K -> wf e.
+Proof.
+intros e T K H. induction H; auto.
+now inv IHkinding.
+Qed.
 
-
-Lemma tsubst_kinding : forall e' T K, kinding e' T K -> (* todo *)
+Lemma tsubst_kinding : forall T e' K, kinding e' T K -> (* todo *)
                                       forall X e L U, insert_kind X e e' -> get_kind X e' = Some L -> kinding e U L -> kinding e (tsubst X U T) K.
 Proof.
-  induction 1; intros; simpl.
-  + admit.
-  + constructor; eauto.
-  + constructor.
-Admitted.
+  induction T as [Y|T1 IHT1 T2 IHT2|k T]; intros e' K HkT X e L U Hik Hgk HkU.
+  - destruct (nat_compare X Y) eqn:H.
+    + simpl. rewrite H. destruct (le_lt_dec K L) as [H1|H1].
+      inversion HkT. comp.
+      replace L with p in HkU.
+      now apply (cumulativity U e p K).
+      rewrite <- H in H3. rewrite H3 in Hgk. now injection Hgk.
+      apply (cumulativity U e L K). omega. assumption.
+    + simpl. rewrite H. inversion HkT. comp. apply KVar with p.
+      apply (kinding_wf e U L HkU).
+      rewrite (insert_kind_get_kind X e e'). replace (leb X (Y-1)) with true. 
+      replace (S (Y-1)) with Y. assumption.
+      admit.
+      admit.
+      assumption. assumption.
+      (* comme les 2e et 3e + se ressemblent, 
+         comment on les traite de la meme façon ? *)
+    + simpl. rewrite H. inversion HkT. apply KVar with p.
+      apply (kinding_wf e U L HkU).
+      rewrite (insert_kind_get_kind X e e'). replace (leb X Y) with false. assumption.
+      admit. assumption. 
+      assumption.
+  - simpl. inversion HkT. apply KArrow.
+    + now apply IHT1 with e' L.
+    + now apply IHT2 with e' L.
+  - simpl. inversion HkT. apply KFAll.
+    apply IHT with (ConsK k e') L. assumption.
+    now constructor.
+    assumption.
+    apply (proj2 (insert_kind_wf_kinding)) with e. assumption.
+    constructor.
+Qed.
