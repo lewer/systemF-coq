@@ -43,3 +43,33 @@ intros u1 u2 R2; induction R2 as [|u2 u3].
   constructor. assumption.
   apply IHR1. assumption.
 Qed.
+
+Lemma lambda_congruent : forall (t1 t2: term) (T:typ),
+   reduction t1 t2 -> reduction (Lam T t1) (Lam T t2).
+Proof.
+intros t1 t2 T H. induction H as [|t2 t3].
+- constructor.
+- apply rtn1_trans with (Lam T t2).
+  now constructor.
+  assumption.
+Qed.
+
+Lemma abs_congruent : forall (t1 t2: term) (K:kind),
+   reduction t1 t2 -> reduction (Abs K t1) (Abs K t2).
+Proof.
+intros t1 t2 K H. induction H as [|t2 t3].
+- constructor.
+- apply rtn1_trans with (Abs K t2).
+  now constructor.
+  assumption.
+ Qed.
+
+Lemma appt_congruent : forall (t1 t2: term) (T:typ),
+   reduction t1 t2 -> reduction (AppT t1 T) (AppT t2 T).
+Proof.
+intros t1 t2 K H. induction H as [|t2 t3].
+- constructor.
+- apply rtn1_trans with (AppT t2 K).
+  now constructor.
+  assumption.
+Qed.
