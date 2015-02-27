@@ -95,6 +95,6 @@ Proof.
     inv H1. destruct X; try discriminate.
     destruct X; try discriminate.
     destruct t; try discriminate.
-    inv H. econstructor. admit.
+    inv H. econstructor. 
 Admitted.
 
