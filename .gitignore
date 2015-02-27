@@ -1,4 +1,9 @@
+coq2html/coq2html
 *.vo
 *.glob
 html
 html2
+*.cmi
+*.cmx
+*.ml
+*.o
