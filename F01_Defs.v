@@ -273,3 +273,18 @@ Fixpoint subst_typ X U t :=
              |Abs k t1 => Abs k (subst_typ (S X) (tshift 0 U) t1)
              |AppT t1 T => AppT (subst_typ X U t1) (tsubst X U T)
          end.
+
+(* substitution de x par t' dans t *)
+Fixpoint subst (x : nat) (t' : term) t {struct t} :=
+  match t with
+  | Var y =>
+      match nat_compare x y with
+      | Eq => t'
+      | Gt => Var y
+      | Lt => Var (y - 1)
+      end
+  | Lam T t  => Lam T (subst (S x) (shift 0 t') t)
+  | App t1 t2  => App (subst x t' t1) (subst x t' t2)
+  | Abs k t => Abs k (subst x (shift 0 t') t)
+  | AppT t T => AppT (subst x t' t) T
+  end.
