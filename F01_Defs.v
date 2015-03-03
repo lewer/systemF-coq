@@ -11,7 +11,7 @@ Ltac comp :=
   rewrite <- ?nat_compare_lt in *; rewrite <- ?nat_compare_gt in *; rewrite ?nat_compare_eq_iff in *.
 
 Ltac mysimpl :=
-  simpl; rewrite <- ?minus_n_O; rewrite ?plus_n_O; simpl.
+  simpl; rewrite <- ?minus_n_O; rewrite <- ?plus_n_O; simpl.
 
 (** Formalisation du système F ! *)
 

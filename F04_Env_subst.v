@@ -1,4 +1,6 @@
 Require Import "F01_Defs".
+Require Import "F03_Insert_kind".
+Require Import "F05_Remove_var".
 
 Inductive env_subst : var -> typ -> env -> env -> Prop :=
   |SubstSubst : forall T e K, kinding e T K  -> env_subst 0 T (ConsK K e) e
@@ -24,34 +26,24 @@ Proof.
   + destruct Y; [omega | simpl].  rewrite <- minus_n_O. destruct Y; [omega |]. rewrite (IHenv_subst (S Y)). simpl. now rewrite <- minus_n_O. omega.
 Qed.
 
-(*
-Inductive insert_type : var -> env -> env -> Prop :=
-| TTop : forall e T K, kinding e T K -> insert_type 0 e (ConsT T e)
-| BelowK : forall e e' X K, insert_type X e e' ->
-      insert_type (S X) (ConsK K e) (ConsK K e')
-| BelowT : forall e e' X T, insert_type X e e' ->
-      insert_type (S X) (ConsT T e) (ConsT (tshift X T) e').
-*)
 
 
 
-
-
-Lemma env_subst_kindable : forall e e' X T K, env_subst X T e e' -> wf e -> get_kind X e = Some K -> kinding e' T K.
+Lemma env_subst_kindable : forall e e' X T K, env_subst X T e e' -> wf e -> wf e' -> get_kind X e = Some K -> kinding e' T K.
 Proof.
-  intros e e' X T K H Hwf Heq. induction H.
+  intros e e' X T K H Hwf Hwf' Heq. induction H.
   + now inv Heq.
-  + (* eapply insert_kind_wf_kinding.
-    eapply IHenv_subst. now inv Hwf. assumption.
+  + eapply insert_kind_wf_kinding.
+    eapply IHenv_subst. now inv Hwf. now inv Hwf'. assumption.
     constructor.
-  + eapply kinding_ConsT.
-    eapply IHenv_subst. now inv Hwf. assumption.*)
-Admitted.
+  + eapply kinding_remove_var. simpl.
+    apply IHenv_subst. now inv Hwf. now inv Hwf'.
+    assumption. reflexivity. assumption.
+Qed.
 
 
 
-
-Lemma env_subst_wf :
+Lemma env_subst_wf_kinding :
   (forall e, wf e -> forall e' X T, env_subst X T e e' -> wf e')
    /\
     (forall e U K, kinding e U K -> forall e' X T, env_subst X T e e' -> kinding e' (tsubst X T U) K).
@@ -65,7 +57,8 @@ Proof.
     econstructor. now apply IH. eapply IH0. eassumption.
   + intros e Y p q Hwf IH eq l e' X T H. simpl.
     destruct (nat_compare X Y) eqn:eq2.
-    - admit.
+    - comp; subst. eapply cumulativity. eassumption.
+      eapply env_subst_kindable; try eassumption. eauto.
     - econstructor; try eassumption. eapply IH; eassumption.
       erewrite <- env_subst_get_kind_lt; try eassumption.
       now apply nat_compare_lt in eq2.

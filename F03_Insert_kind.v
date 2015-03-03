@@ -126,16 +126,16 @@ Proof.
       apply (kinding_wf e U L HkU).
       rewrite (insert_kind_get_kind X e e'). replace (leb X (Y-1)) with true. 
       replace (S (Y-1)) with Y. assumption.
-      admit.
-      admit.
+      destruct Y; [omega|]. now mysimpl.
+      symmetry. comp. omega.
       assumption. assumption.
       (* comme les 2e et 3e + se ressemblent, 
          comment on les traite de la meme façon ? *)
     + simpl. rewrite H. inversion HkT. apply KVar with p.
       apply (kinding_wf e U L HkU).
       rewrite (insert_kind_get_kind X e e'). replace (leb X Y) with false. assumption.
-      admit. assumption. 
-      assumption.
+      symmetry. comp. omega.
+      assumption. assumption.
   - simpl. inversion HkT. apply KArrow.
     + now apply IHT1 with e' L.
     + now apply IHT2 with e' L.
