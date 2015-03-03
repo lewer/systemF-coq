@@ -2,7 +2,6 @@ Require Import "F01_Defs".
 Require Import Coq.Program.Equality.  (* needed for dependent induction *)
 
 
-
 Fixpoint remove_var x e {struct e} : env :=
   match e with
     | Nil => Nil
