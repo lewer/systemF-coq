@@ -1,5 +1,5 @@
 all:
-	coqc  F01_Defs.v F03_Insert_kind.v F05_Remove_var.v F04_Env_subst.v F06_Regularity.v F02_Inference.v 
+	coqc  F01_Defs.v F03_Insert_kind.v F05_Remove_var.v F04_Env_subst.v F06_Regularity.v F02_Inference.v
 
 doc:
 	rm -rf html
