@@ -13,17 +13,18 @@ Ltac comp :=
 Ltac mysimpl :=
   simpl; rewrite <- ?minus_n_O; rewrite ?plus_n_O; simpl.
 
-(** Formalisation du système F ! *)
 
 (** * Définitions  *)
 
-(**  On utilise des indices de de Bruinj pour repérsenter les termes.*)
-(** [var] est les type des variable (l'indice en fait) et [kind] celui des sortes  *)
+(**  On utilise des indices de de Bruinj pour représenter les termes.*)
+
+
+(** [var] est le type des variables (l'indice en fait) et [kind] celui des sortes  *)
 Definition var := nat.
 
 Definition kind := nat.
 
-(** On définit les types et les termes.  *)
+(** On définit les types et les termes. *)
 Inductive typ :=
   | TyVar : var -> typ
   | Arrow : typ -> typ -> typ
@@ -36,7 +37,7 @@ Inductive term :=
   | Abs : kind -> term -> term
   | AppT : term -> typ -> term.
 
-(** Un environnement est une liste de déclarations de sortes et de types. *)
+(** Un environnement est une liste de déclarations de sortes et de types. Ces déclarations sont ordonnées dans la liste de manière à respecter les indices de de Bruijn. Nous avons choisi pour cela d'utiliser la même numérotation pour les types que pour les termes. *)
 Inductive env :=
   | Nil : env
   | ConsK : kind -> env -> env
@@ -73,6 +74,7 @@ Fixpoint get_kind (X:var) (e:env) : option kind :=
     | _ => None
   end.
 
+(** [get_type x e] renvoie le type de la variable d'indice [x] dans l'environnement [e]. *)
 Fixpoint get_type (x:var) (e:env) :=
   match (x, e) with
     | (0, ConsT T _) => Some (tshift 0 T)
