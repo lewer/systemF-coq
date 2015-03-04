@@ -19,7 +19,7 @@ Ltac comp :=
 
 (** [mysimpl], une tactique simpl capable de calculer [n + 0] et [0 + n] *)
 Ltac mysimpl :=
-  simpl; rewrite <- ?minus_n_O; rewrite ?plus_n_O; simpl.
+  simpl; rewrite <- ?minus_n_O; rewrite <- ?plus_n_O; simpl.
 
 (** ** Définitions de base *)
 

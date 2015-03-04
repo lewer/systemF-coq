@@ -1,5 +1,5 @@
 Require Import "F01_Defs".
-
+Require Import Coq.Program.Equality.  (* needed for dependent induction *)
 
 
 Fixpoint remove_var x e {struct e} : env :=
@@ -78,23 +78,14 @@ Qed.
 
 
 
-
 Lemma kinding_remove_var : forall e x T K,
-                           kinding (remove_var x e) T K -> kinding e (tshift x T) K.
-Admitted.
-
-
-Lemma wf_remove_var : forall e, wf e ->
-  forall e' x T K, e = remove_var x e' -> get_type x e' = Some T -> kinding e' T K -> wf e'.
+   kinding (remove_var x e) T K -> forall U, get_type x e = Some U -> wf e -> kinding e (tshift x T) K.
 Proof.
-  induction 1; intros.
-  + destruct e'; econstructor.
-    destruct x; discriminate.
-    destruct x; [|discriminate].
-    simpl in H. subst e'. inv H0.
-    inv H1. destruct X; try discriminate.
-    destruct X; try discriminate.
-    destruct t; try discriminate.
-    inv H. econstructor. 
-Admitted.
-
+  intros e x T K H U HU Hwf. dependent induction H; simpl.
+  * destruct (leb x X) eqn:?; comp; econstructor; try eassumption.
+    + erewrite remove_var_get_kind_ge; try eassumption. 
+    + erewrite remove_var_get_kind_lt; try eassumption.
+  * constructor; eauto.
+  * constructor. eapply IHkinding. reflexivity.
+    simpl. rewrite HU. reflexivity. now constructor.
+Qed.
