@@ -5,22 +5,17 @@ Require Export Max.
 Require Export Omega.
 Require Export Relations.
 (* end hide *)
-
 (** * I. Définitions et utilitaires *)
-
 (** ** Quelques tactiques personnalisées *)
 (** [inv], un utilitaire pour se débarrasser des cas d'inversion triviaux *)
 Ltac inv H := inversion H; try subst; clear H.
-
 (** [comp], pour transformer les tests d'égalité booléens en des propriétés *)
 Ltac comp :=
   rewrite ?leb_iff in *; rewrite ?leb_iff_conv in *;
   rewrite <- ?nat_compare_lt in *; rewrite <- ?nat_compare_gt in *; rewrite ?nat_compare_eq_iff in *.
-
 (** [mysimpl], une tactique simpl capable de calculer [n + 0] et [0 + n] *)
 Ltac mysimpl :=
   simpl; rewrite <- ?minus_n_O; rewrite <- ?plus_n_O; simpl.
-
 (** ** Définitions de base *)
 
 (**  On utilise des indices de de Bruijn pour représenter les termes. Les variables liées sont dénotées par des nombres indiquant le nombre de lieurs les séparant du leur. L'intérêt de cette notation est de simplifier les problèmes d'α-conversion. *)
@@ -30,7 +25,6 @@ Ltac mysimpl :=
 Definition var := nat.
 
 Definition kind := nat.
-
 (** On définit les types et les termes. *)
 Inductive typ :=
   | TyVar : var -> typ

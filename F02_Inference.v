@@ -2,9 +2,8 @@
 Require Import "F01_Defs".
 Require Import "F06_Regularity".
 (* end hide *)
-
 (** * II. Inférences de types et de kinds  *)
-
+(** Dans cette partie du projet nous proposons des algorithmes d'inférence des kinds et des types, puis nous montrons qu'il fonctionnent correctement eu égard aux prédicats [kinding] et [typing] définis dans la #<a href="F01_Defs.html">#première partie#</a>#.*)
 (** ** Inférence de kinds *)
 
 (** Cette première fonction [infer_kind (e:env) (T:typ)] recherche le kind du type [T] dans l'environnement [e] *) 
