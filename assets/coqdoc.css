@@ -1,7 +1,7 @@
 body {
     padding: 0px 0px;
     margin: 0px 0px;
-    background-color: #FFFDF7;
+    background-color: #53777A;
     counter-reset: sectionh2;
 }
 
@@ -11,7 +11,7 @@ body {
     padding-bottom: 10px;
     margin-left: auto;
     margin-right: auto;
-    background-color: #FFFDF5;
+    background-color: #FFFDF7;
     width: 900px;
 }
 
