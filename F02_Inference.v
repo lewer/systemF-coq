@@ -1,7 +1,13 @@
+(* begin hide *)
 Require Import "F01_Defs".
 Require Import "F06_Regularity".
+(* end hide *)
 
-(** * Inférence de kind  *)
+(** * II. Inférences de types et de kinds  *)
+
+(** ** Inférence de kinds *)
+
+(** Cette première fonction [infer_kind (e:env) (T:typ)] recherche le kind du type [T] dans l'environnement [e] *) 
 Fixpoint infer_kind (e:env) (T:typ) : option kind :=
   match T with
     | TyVar X => get_kind X e
@@ -15,9 +21,10 @@ Fixpoint infer_kind (e:env) (T:typ) : option kind :=
                   end
   end.
 
-
+(** Et le lemme qui va avec: le kind trouvé par [infer_kind] est un bon kind si l'environnement est bien formé *)
 Lemma infer_kind_correct : forall T e K,
   wf e -> infer_kind e T = Some K -> kinding e T K .
+(** *)
 Proof.
   induction T; intros e K Hwf H.
   + econstructor; try eassumption. omega.
@@ -30,15 +37,16 @@ Proof.
     inv H. constructor. apply IHT. now constructor. easy.
 Qed.
 
-(** * Inférence de types  *)
+(** ** Inférence de types  *)
 
-(* On peut décider si deux types T et U sont égaux *)
+(** Un petit utilitaire: on peut décider si deux types [T] et [U] sont égaux *)
 Lemma eq_typ_dec : forall (T U :typ), {T=U} + {T<>U}.
+(** *)
 Proof.
   decide equality; decide equality.
 Qed.
 
-
+(** Comme précédemment, voici la fonction d'inférence de type. *)
 Fixpoint infer_type (e:env) (t:term) :=
   match t with 
     | Var x => get_type x e
@@ -61,9 +69,9 @@ Fixpoint infer_type (e:env) (t:term) :=
   end.
 
 
-(* c'est nul, on est obligé d'utiliser regularity à cause du t_minus à cause qu'on a foiré typing, bref.. *)
-Lemma infer_type_correct : forall t e T,
-  wf e -> infer_type e t = Some T -> typing e t T.
+(** c'est nul, on est obligé d'utiliser regularity à cause du t_minus à cause qu'on a foiré typing, bref.. *)
+Lemma infer_type_correct : forall t e T, wf e -> infer_type e t = Some T -> typing e t T.
+(** *)
 Proof.
   induction t as [v|T1 t|t1 IHt1 t2 IHt2|K t|t IHt T2]; intros e T Hwf H; simpl in H.
   + now apply TVar.
@@ -95,3 +103,6 @@ Proof.
     - apply (cumulativity _ _ K2). assumption.
       apply infer_kind_correct; congruence.
 Qed.
+
+(** #<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>#
+    #<script src="coqjs.js"></script># *)

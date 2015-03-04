@@ -121,7 +121,8 @@ h4.section {
     color: black;
     padding: 10px;
     /*background-color: #90bdff;*/
-    border-style: plain
+    border-style: plain;
+    text-align: justify;
 
 
 }

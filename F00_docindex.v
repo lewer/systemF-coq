@@ -4,3 +4,4 @@
 
 (** * Sommaire *)
 (** - #<a href="F01_Defs.html">#Choix d'implémentation et utilitaires#</a># *)
+(** - #<a href="F02_Inference.html">#Inférences de kinds et de types#</a># *)
