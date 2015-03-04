@@ -47,7 +47,7 @@ function drawNav() {
         '<span class="nav_item '+active('F01_Defs.html')+'"><a href="F01_Defs.html" alt="Définitions de base">I</a></span>' +
         '<span class="nav_item '+active('F02_Inference.html')+'"><a href="F02_Inference.html" alt="Inférence de kinds et de types">II</a></span>' +
         '<span class="nav_item '+active('F03_Insert_kind.html')+'"><a href="F03_Insert_kind.html" alt="Insertion de kind">III</a></span>' +
-        '<span class="nav_item '+active('F04_Env_Subst.html')+'"><a href="F04_Env_Subst.html" alt="Subtitutions dans un environnement">IV</a></span>' +
+        '<span class="nav_item '+active('F04_Env_subst.html')+'"><a href="F04_Env_Subst.html" alt="Subtitutions dans un environnement">IV</a></span>' +
         '</div>')
     $("body").prepend(nav);
 }
