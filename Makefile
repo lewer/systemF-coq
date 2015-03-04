@@ -5,7 +5,7 @@ doc:
 	rm -rf html
 	mkdir html
 	coqdoc -utf8 -d html -s -toc F00_docindex.v F01_Defs.v F03_Insert_kind.v F05_Remove_var.v F04_Env_subst.v F06_Regularity.v F02_Inference.v 
-	cp -f assets/coqdoc.css assets/coqjs.js html
+	cp -f assets/* html
 
 coq2html/coq2html:
 	ocamllex coq2html/coq2html.mll
