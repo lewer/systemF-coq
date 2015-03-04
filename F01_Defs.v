@@ -95,7 +95,7 @@ Fixpoint tsubst (X:nat) (U:typ) (T:typ) :=
   end.
 
 
-(** De même [subst_typ X U t] substitue [X] par le type [U] dans le terme [t]. *)
+(** De même, [subst_typ X U t] substitue [X] par le type [U] dans le terme [t]. *)
 Fixpoint subst_typ X U t :=
          match t with
              |Var _ => t
@@ -152,7 +152,7 @@ with kinding : env -> typ -> kind -> Prop :=
   | KArrow : forall e T1 T2 p q, kinding e T1 p -> kinding e T2 q -> kinding e (Arrow T1 T2) (max p q)
   | KFAll : forall e T p q, kinding (ConsK q e) T p -> kinding e (FAll q T) (S (max p q)).
 
-(** Un type est donc [kindable] si il existe un kind tel que l'on puisse associé ce kind à ce type dans l'environnement. *)
+(** Un type est donc [kindable] si il existe un kind tel que l'on puisse associer ce kind à ce type dans l'environnement. *)
 Definition kindable e T := exists K, kinding e T K.
 
 
@@ -164,7 +164,7 @@ Inductive typing : env -> term -> typ -> Prop :=
   | TAbs : forall e t K T, typing (ConsK K e) t T -> typing e (Abs K t) (FAll K T)
   | TAppT : forall e t K T1 T2, typing e t (FAll K T1) -> kinding e T2 K -> typing e (AppT t T2) (tsubst 0 T2 T1).
 
-(** ** Propriétés sur ces utilitaires  *)
+(** ** Propriétés de ces utilitaires  *)
 
 (** Nous commençons par quelques propriétés de commutativité qui se révèleront utiles par la suite. En voici une première sur [tshift]: *)
 Lemma tshift_tshift : forall T c d,

@@ -5,7 +5,7 @@ var proofs = $("span:contains('Proof')").parent('.code');
 
 /** Hides a proof and show a button */
 function hideProof(p, t) {
-    var link = $('<input type="button" value="Afficher la preuve"/>');
+    var link = $('<input type="button" class="proof_but" value="Afficher la preuve"/>');
     link.click(function() {
         showProof(p, trans_time);
         $(this).remove();
@@ -16,7 +16,7 @@ function hideProof(p, t) {
 
 /** Shows a proof and show a button */
 function showProof(p, t) {
-    var link = $('<input type="button" value="Masquer la preuve"/>');
+    var link = $('<input type="button" class="proof_but" value="Masquer la preuve"/>');
     link.click(function() {
         hideProof(p, trans_time);
         $(this).remove();

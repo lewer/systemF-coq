@@ -32,6 +32,11 @@ body {
     color: #C02942;
 }
 
+.proof_but {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
 
 /* Contents */
 
