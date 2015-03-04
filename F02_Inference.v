@@ -2,8 +2,9 @@
 Require Import "F01_Defs".
 Require Import "F06_Regularity".
 (* end hide *)
-(** * II. Inférences de types et de kinds  *)
-(** Dans cette partie du projet nous proposons des algorithmes d'inférence des kinds et des types, puis nous montrons qu'il fonctionnent correctement eu égard aux prédicats [kinding] et [typing] définis dans la #<a href="F01_Defs.html">#première partie#</a>#.*)
+(** * II. Inférences de types et de kinds
+Dans cette partie du projet nous proposons des algorithmes d'inférence des kinds et des types, puis nous montrons qu'il fonctionnent correctement eu égard aux prédicats [kinding] et [typing] définis dans la #<a href="F01_Defs.html">#première partie#</a>#.*)
+
 (** ** Inférence de kinds *)
 
 (** Cette première fonction [infer_kind (e:env) (T:typ)] recherche le kind du type [T] dans l'environnement [e] *) 
@@ -19,6 +20,8 @@ Fixpoint infer_kind (e:env) (T:typ) : option kind :=
                     | _ => None
                   end
   end.
+(** *)
+
 (** Et le lemme qui va avec: le kind trouvé par [infer_kind] est un bon kind si l'environnement est bien formé *)
 Lemma infer_kind_correct : forall T e K,
   wf e -> infer_kind e T = Some K -> kinding e T K .
@@ -34,6 +37,9 @@ Proof.
     destruct (infer_kind (ConsK k e) T) eqn:?; [|discriminate].
     inv H. constructor. apply IHT. now constructor. easy.
 Qed.
+(** *)
+
+
 (** ** Inférence de types  *)
 
 (** Un petit utilitaire: on peut décider si deux types [T] et [U] sont égaux *)
@@ -64,6 +70,8 @@ Fixpoint infer_type (e:env) (t:term) :=
                      | _ => None
                    end
   end.
+(** *)
+
 (** c'est nul, on est obligé d'utiliser regularity à cause du t_minus à cause qu'on a foiré typing, bref.. *)
 Lemma infer_type_correct : forall t e T, wf e -> infer_type e t = Some T -> typing e t T.
 (** *)
