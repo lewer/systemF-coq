@@ -37,13 +37,11 @@ Inductive term :=
   | App : term -> term -> term
   | Abs : kind -> term -> term
   | AppT : term -> typ -> term.
-
 (** Un environnement est une liste de déclarations de sortes et de types. Ces déclarations sont ordonnées dans la liste de manière à respecter les indices de de Bruijn. Nous avons choisi pour cela d'utiliser la même numérotation pour les types que pour les termes. *)
 Inductive env :=
   | Nil : env
   | ConsK : kind -> env -> env
   | ConsT : typ -> env -> env.
-
 (** ** Utilitaires de substitutions *)
 
 (** En raison de l'utilisation de la notation de de Bruijn, il convient de correctement mettre à jour les indices des variables lors des différentes opérations de substitutions par des termes ou des types. *)
@@ -57,7 +55,6 @@ Fixpoint tshift (c:var) (T:typ) {struct T} : typ :=
     | Arrow T1 T2 => Arrow (tshift c T1) (tshift c T2)
     | FAll K T => FAll K (tshift (S c) T)
   end.
-
 (** Idem mais décrémente les variables [<=x] *)
 Fixpoint tshift_minus (x : var) (T : typ) {struct T} : typ :=
   match T with
@@ -65,7 +62,6 @@ Fixpoint tshift_minus (x : var) (T : typ) {struct T} : typ :=
     | Arrow T1 T2 => Arrow (tshift_minus x T1) (tshift_minus x T2)
     | FAll K T0 => FAll K (tshift_minus (S x) T0)
   end.
-
 (** [shift c t] incrémente les variables [>= c] dans le terme [t] *)
 Fixpoint shift (c:var) (t:term) : term :=
   match t with
@@ -75,7 +71,6 @@ Fixpoint shift (c:var) (t:term) : term :=
     | Abs K t => Abs K (shift (S c) t)
     | AppT t T => AppT (shift c t) (tshift c T)
   end.
-
 (** [tsubst (X:nat) (U:typ) (T:typ)] substitue [X] par le type [U] dans le type [T]. Il faut penser à "shifter" lorsque l'on traverse un [FAll], en raison du choix d'utiliser un unique compteur pour les types et les kinds dans l'environnement. *)
 Fixpoint tsubst (X:nat) (U:typ) (T:typ) :=
   match T with
@@ -87,8 +82,6 @@ Fixpoint tsubst (X:nat) (U:typ) (T:typ) :=
     | Arrow T1 T2 => Arrow (tsubst X U T1) (tsubst X U T2)
     | FAll K T => FAll K (tsubst (S X) (tshift 0 U) T)
   end.
-
-
 (** De même, [subst_typ X U t] substitue [X] par le type [U] dans le terme [t]. *)
 Fixpoint subst_typ X U t :=
          match t with
@@ -98,7 +91,6 @@ Fixpoint subst_typ X U t :=
              |Abs k t1 => Abs k (subst_typ (S X) (tshift 0 U) t1)
              |AppT t1 T => AppT (subst_typ X U t1) (tsubst X U T)
          end.
-
 (** Enfin, [subst (x : nat) (t' : term) (t : term)] substitue [x] par le terme [t'] dans le terme [t] *)
 Fixpoint subst (x : nat) (t' : term) t {struct t} :=
   match t with
@@ -113,7 +105,6 @@ Fixpoint subst (x : nat) (t' : term) t {struct t} :=
   | Abs k t => Abs k (subst x (shift 0 t') t)
   | AppT t T => AppT (subst x t' t) T
   end.
-
 (** ** Utilitaires d'environnements *)
 
 (** [get_kind X e] renvoie la sorte de la variable d'indice [X] dans l'environnement [e].
@@ -125,7 +116,6 @@ Fixpoint get_kind (X:var) (e:env) : option kind :=
     | (S X, ConsT _ e) => get_kind X e
     | _ => None
   end.
-
 (** [get_type x e] renvoie le type de la variable d'indice [x] dans l'environnement [e]. *)
 Fixpoint get_type (x:var) (e:env) :=
   match (x, e) with
@@ -134,7 +124,6 @@ Fixpoint get_type (x:var) (e:env) :=
     | (S x, ConsT _ e) => option_map (tshift 0) (get_type x e)
     | _ => None
   end.
-
 (** [wf : env -> Prop] explicite le fait pour un environnement d'être bien formé. Il s'agit de vérifier que l'environnement résulte bien d'un empilement de kinds et de types et que le [kind] de tout [typ] présent dans l'environnement y est également présent. Cette dernière vérification est représentée  par le prédicat [kinding: env -> typ -> kind -> Prop]. *)
 Inductive wf : env -> Prop :=
   | WfNil : wf Nil
@@ -145,10 +134,8 @@ with kinding : env -> typ -> kind -> Prop :=
   | KVar : forall e X p q, wf e -> get_kind X e = Some p -> (p <= q) -> kinding e (TyVar X) q
   | KArrow : forall e T1 T2 p q, kinding e T1 p -> kinding e T2 q -> kinding e (Arrow T1 T2) (max p q)
   | KFAll : forall e T p q, kinding (ConsK q e) T p -> kinding e (FAll q T) (S (max p q)).
-
 (** Un type est donc [kindable] si il existe un kind tel que l'on puisse associer ce kind à ce type dans l'environnement. *)
 Definition kindable e T := exists K, kinding e T K.
-
 
 (** Enfin, nous définissons le prédicat [typing e t T] qui décrit le fait pour un terme [t] d'avoir le type [T] dans l'environnement [e]. *)
 Inductive typing : env -> term -> typ -> Prop :=
@@ -157,7 +144,6 @@ Inductive typing : env -> term -> typ -> Prop :=
   | TApp : forall e t1 t2 T1 T2, typing e t1 (Arrow T1 T2) -> typing e t2 T1 -> typing e (App t1 t2) T2
   | TAbs : forall e t K T, typing (ConsK K e) t T -> typing e (Abs K t) (FAll K T)
   | TAppT : forall e t K T1 T2, typing e t (FAll K T1) -> kinding e T2 K -> typing e (AppT t T2) (tsubst 0 T2 T1).
-
 (** ** Propriétés de ces utilitaires  *)
 
 (** Nous commençons par quelques propriétés de commutativité qui se révèleront utiles par la suite. En voici une première sur [tshift]: *)
@@ -218,7 +204,6 @@ Proof.
   + apply f_equal2; auto.
   + apply f_equal; auto.
 Qed.
-
 
 (** ...mais pas tout à fait dans l'autre, un lemme intermédiaire, [get_get] est nécessaire. Celui-ci montre qu'un kind et un type ne peuvent avoir le même indice dans l'environnement:  *)
 
