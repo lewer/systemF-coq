@@ -41,7 +41,7 @@ body {
 /* Contents */
 
 #main{ display: block;
-       padding: 10px;
+       /*padding: 10px;*/
        font-family: sans-serif;
        font-size: 100%;
        line-height: 100% }
@@ -168,11 +168,14 @@ h4.section {
 
 .code {
     padding-left: 50px;
-
     display: block;
-/*  padding-left: 15px; */
-    font-size: 110%; 
+    font-size: 14px;
     font-family: monospace;
+
+    /* Lines ! */
+    background-color: white;
+    background-image: linear-gradient(transparent 15px, rgba(220,220,200,1) 16px, transparent 16px);
+    background-size: 100% 16px;
  } 
 
 table.infrule {
