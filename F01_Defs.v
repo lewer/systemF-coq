@@ -152,7 +152,7 @@ with kinding : env -> typ -> kind -> Prop :=
   | KArrow : forall e T1 T2 p q, kinding e T1 p -> kinding e T2 q -> kinding e (Arrow T1 T2) (max p q)
   | KFAll : forall e T p q, kinding (ConsK q e) T p -> kinding e (FAll q T) (S (max p q)).
 
-(** Un type est donc [kindable] si il existe un kind tel que l'on puisse associer ce kind à ce type dans l'environnement. *)
+(** Un type est donc [kindable] si il existe un kind tel que l'on puisse associergit add  ce kind à ce type dans l'environnement. *)
 Definition kindable e T := exists K, kinding e T K.
 
 
@@ -315,5 +315,5 @@ Qed.
 
 
 
-(** #<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
-<script src="coqjs.js"></script># *)
+(** #<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>#
+    #<script src="coqjs.js"></script># *)
