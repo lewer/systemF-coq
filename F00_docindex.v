@@ -5,3 +5,5 @@
 (** * Sommaire *)
 (** - #<a href="F01_Defs.html">#Choix d'implémentation et utilitaires#</a># *)
 (** - #<a href="F02_Inference.html">#Inférences de kinds et de types#</a># *)
+(** - #<a href="F03_Insert_kind.html">#Insert kind#</a># *)
+(** - #<a href="F04_Env_subst.html">#Subtitutions dans l'environnement#</a># *)

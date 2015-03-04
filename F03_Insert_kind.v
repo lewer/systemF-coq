@@ -1,5 +1,8 @@
+(* begin hide *)
 Require Import "F01_Defs".
-
+(* end hide *)
+(** * III. Insert kind
+Dans cette partie, nous nous concentrons sur la notion d'insertion d'un kind dans l'environnement. Nous allons notamment montrer un certain nombre de propriétés de stabilité, qui nous permettront finalement de prouver que le [kinding] est conservé lors d'une substitution de types. *)
 
 Inductive insert_kind : var -> env -> env -> Prop :=
 | Top : forall e K, insert_kind 0 e (ConsK K e)
@@ -7,11 +10,16 @@ Inductive insert_kind : var -> env -> env -> Prop :=
       insert_kind (S X) (ConsK K e) (ConsK K e')
 | BelowT : forall e e' X T, insert_kind X e e' ->
       insert_kind (S X) (ConsT T e) (ConsT (tshift X T) e').
+(** *)
 
 
 
-Lemma insert_kind_get_kind : forall X e e', insert_kind X e e' -> forall Y,
-                  get_kind Y e = (get_kind (if leb X Y then S Y else Y) e').
+(** ** Propriétés *)
+
+(** Le lemme suivant montre que l'ajout d'un kind dans un environnement n'empêche pas d'accéder à ses anciens éléments, tant que l'on tient compte de l'éventuel shifting provoqué par l'insertion. *)
+Lemma insert_kind_get_kind : forall X e e', insert_kind X e e' ->
+                forall Y, get_kind Y e = (get_kind (if leb X Y then S Y else Y) e').
+(** *)
 Proof.
   intros X e e' H. induction H; intros.
   + easy.
@@ -26,34 +34,16 @@ Proof.
     destruct (leb X Y) eqn:?.
     reflexivity. reflexivity.
 Qed.
+(** *)
 
 
-
-Lemma insert_kind_wf_kinding :
-  (forall e, wf e -> forall X e', insert_kind X e e' -> wf e')
-      /\
-        (forall e T K, kinding e T K -> forall X e', insert_kind X e e' -> kinding e' (tshift X T) K).
-Proof.
-  apply wf_kinding_ind_mut.
-  + intros X e' Hins. inv Hins. apply WfConsK. apply WfNil.
-  + intros K e w IHHwf X e' Hins. inv Hins. apply WfConsK. now apply WfConsK.
-    apply WfConsK. eapply IHHwf. eassumption.
-  + intros T e K k IHHwf w IHHwf0 X e' Hins. inv Hins. apply WfConsK. eapply WfConsT; eassumption. eapply WfConsT. apply IHHwf. 
-assumption. eapply IHHwf0. eassumption.
-  + intros e Y p q w IHHwf H H' X e' Hins. specialize (insert_kind_get_kind _ _ _ Hins Y). intros. simpl. destruct (leb X Y); eapply KVar; eauto. congruence.
-    congruence.
-  + intros e T1 T2 p q k IHHwf Hk IHHwf0 X e' Hins. apply KArrow; auto.
-  + intros e T p q k IHHwf X e' Hins. apply KFAll. apply IHHwf. now apply BelowK.
-Qed.
-
-
-
-
+(** De même, on montre que les type accessibles avant insertion d'un kind le sont toujours après. *)
 Lemma insert_kind_get_type : forall X e e', insert_kind X e e' -> forall x, 
             get_type x e' = match nat_compare X x with
                               | Lt => option_map (tshift X) (get_type (x-1) e)
                               | Eq => None
                               | Gt => option_map (tshift (X)) (get_type x e) end.
+(** *)
 Proof.
   intros X e e' H. induction H; intros.
   + destruct x; simpl. reflexivity. now rewrite <- minus_n_O.
@@ -70,11 +60,37 @@ Proof.
     * apply nat_compare_Gt_gt in Heqc. destruct (get_type x e); [|reflexivity]. simpl. apply f_equal.
       specialize (tshift_tshift t 0 X). rewrite plus_O_n. easy.
 Qed.
+(** *)
 
 
-                            
+(** Nous montrons maintenant, en utilisant l'induction mutuelle définie dans la #<a href="F01_Defs.html">#partie I#</a>#, qu'un environnement bien fondé l'est toujours après l'insertion d'un kind et que le kinding est également conservé par une insertion de kind. Il est utile ici de faire une induction mutuelle car [kinding e _ _] nécessite [wf_env e]. *)
+Lemma insert_kind_wf_kinding :
+  (forall e, wf e -> forall X e', insert_kind X e e' -> wf e')
+      /\
+        (forall e T K, kinding e T K -> forall X e', insert_kind X e e' -> kinding e' (tshift X T) K).
+(** *)
+Proof.
+  apply wf_kinding_ind_mut.
+  + intros X e' Hins. inv Hins. apply WfConsK. apply WfNil.
+  + intros K e w IHHwf X e' Hins. inv Hins. apply WfConsK. now apply WfConsK.
+    apply WfConsK. eapply IHHwf. eassumption.
+  + intros T e K k IHHwf w IHHwf0 X e' Hins. inv Hins. apply WfConsK. eapply WfConsT; eassumption. eapply WfConsT. apply IHHwf. 
+assumption. eapply IHHwf0. eassumption.
+  + intros e Y p q w IHHwf H H' X e' Hins. specialize (insert_kind_get_kind _ _ _ Hins Y). intros. simpl. destruct (leb X Y); eapply KVar; eauto. congruence.
+    congruence.
+  + intros e T1 T2 p q k IHHwf Hk IHHwf0 X e' Hins. apply KArrow; auto.
+  + intros e T p q k IHHwf X e' Hins. apply KFAll. apply IHHwf. now apply BelowK.
+Qed.
+(** *)
+
+
+
+(** ** Conservation du typage et du kinding *)
+
+(** On a la conservation du typage: *)
 Lemma insert_kind_typing : forall e t T, typing e t T ->
        forall X e', insert_kind X e e' -> typing e' (shift X t) (tshift X T).
+(** *)
 Proof.
   intros e t T Ht. induction Ht; intros X e' Hins.
   + simpl. destruct (leb X x) eqn:?.
@@ -104,15 +120,23 @@ Proof.
     specialize  (tsubst_tshift T1 0 X T2).
     now rewrite plus_O_n.
 Qed.
+(** *)
 
+
+(** Mais un autre lemme est nécessaire, le fait que [kinding e _ _] implique [wf e] *)
 Lemma kinding_wf : forall e T K, kinding e T K -> wf e.
+(** *)
 Proof.
 intros e T K H. induction H; auto.
 now inv IHkinding.
 Qed.
+(** *)
 
-Lemma tsubst_kinding : forall T e' K, kinding e' T K -> (* todo *)
+
+(** Et enfin, la conservation du kinding par subtitution dans un type proprement dite:*)
+Lemma tsubst_kinding : forall T e' K, kinding e' T K -> (** todo *)
                                       forall X e L U, insert_kind X e e' -> get_kind X e' = Some L -> kinding e U L -> kinding e (tsubst X U T) K.
+(** *)
 Proof.
   induction T as [Y|T1 IHT1 T2 IHT2|k T]; intros e' K HkT X e L U Hik Hgk HkU.
   - destruct (nat_compare X Y) eqn:H.
@@ -146,3 +170,8 @@ Proof.
     apply (proj2 (insert_kind_wf_kinding)) with e. assumption.
     constructor.
 Qed.
+
+
+
+(** #<script src="jquery.min.js"></script>#
+    #<script src="coqjs.js"></script># *)

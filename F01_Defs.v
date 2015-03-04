@@ -22,6 +22,7 @@ Ltac mysimpl :=
 (** *)
 
 
+
 (** ** Définitions de base *)
 
 (**  On utilise des indices de de Bruijn pour représenter les termes. Les variables liées sont dénotées par des nombres indiquant le nombre de lieurs les séparant du leur. L'intérêt de cette notation est de simplifier les problèmes d'α-conversion. *)
@@ -31,6 +32,7 @@ Definition var := nat.
 
 Definition kind := nat.
 (** *)
+
 
 (** On définit les types et les termes. *)
 Inductive typ :=
@@ -46,12 +48,14 @@ Inductive term :=
   | AppT : term -> typ -> term.
 (** *)
 
+
 (** Un environnement est une liste de déclarations de sortes et de types. Ces déclarations sont ordonnées dans la liste de manière à respecter les indices de de Bruijn. Nous avons choisi pour cela d'utiliser la même numérotation pour les types que pour les termes. *)
 Inductive env :=
   | Nil : env
   | ConsK : kind -> env -> env
   | ConsT : typ -> env -> env.
 (** *)
+
 
 
 (** ** Utilitaires de substitutions *)
@@ -68,6 +72,7 @@ Fixpoint tshift (c:var) (T:typ) {struct T} : typ :=
   end.
 (** *)
 
+
 (** Idem mais décrémente les variables [<=x] *)
 Fixpoint tshift_minus (x : var) (T : typ) {struct T} : typ :=
   match T with
@@ -76,6 +81,7 @@ Fixpoint tshift_minus (x : var) (T : typ) {struct T} : typ :=
     | FAll K T0 => FAll K (tshift_minus (S x) T0)
   end.
 (** *)
+
 
 (** [shift c t] incrémente les variables [>= c] dans le terme [t] *)
 Fixpoint shift (c:var) (t:term) : term :=
@@ -87,6 +93,7 @@ Fixpoint shift (c:var) (t:term) : term :=
     | AppT t T => AppT (shift c t) (tshift c T)
   end.
 (** *)
+
 
 (** [tsubst (X:nat) (U:typ) (T:typ)] substitue [X] par le type [U] dans le type [T]. Il faut penser à "shifter" lorsque l'on traverse un [FAll], en raison du choix d'utiliser un unique compteur pour les types et les kinds dans l'environnement. *)
 Fixpoint tsubst (X:nat) (U:typ) (T:typ) :=
@@ -101,6 +108,7 @@ Fixpoint tsubst (X:nat) (U:typ) (T:typ) :=
   end.
 (** *)
 
+
 (** De même, [subst_typ X U t] substitue [X] par le type [U] dans le terme [t]. *)
 Fixpoint subst_typ X U t :=
          match t with
@@ -111,6 +119,7 @@ Fixpoint subst_typ X U t :=
              |AppT t1 T => AppT (subst_typ X U t1) (tsubst X U T)
          end.
 (** *)
+
 
 (** Enfin, [subst (x : nat) (t' : term) (t : term)] substitue [x] par le terme [t'] dans le terme [t] *)
 Fixpoint subst (x : nat) (t' : term) t {struct t} :=
@@ -129,6 +138,7 @@ Fixpoint subst (x : nat) (t' : term) t {struct t} :=
 (** *)
 
 
+
 (** ** Utilitaires d'environnements *)
 
 (** [get_kind X e] renvoie la sorte de la variable d'indice [X] dans l'environnement [e].
@@ -142,6 +152,7 @@ Fixpoint get_kind (X:var) (e:env) : option kind :=
   end.
 (** *)
 
+
 (** [get_type x e] renvoie le type de la variable d'indice [x] dans l'environnement [e]. *)
 Fixpoint get_type (x:var) (e:env) :=
   match (x, e) with
@@ -151,6 +162,7 @@ Fixpoint get_type (x:var) (e:env) :=
     | _ => None
   end.
 (** *)
+
 
 (** [wf : env -> Prop] explicite le fait pour un environnement d'être bien formé. Il s'agit de vérifier que l'environnement résulte bien d'un empilement de kinds et de types et que le [kind] de tout [typ] présent dans l'environnement y est également présent. Cette dernière vérification est représentée  par le prédicat [kinding: env -> typ -> kind -> Prop]. *)
 Inductive wf : env -> Prop :=
@@ -164,6 +176,7 @@ with kinding : env -> typ -> kind -> Prop :=
   | KFAll : forall e T p q, kinding (ConsK q e) T p -> kinding e (FAll q T) (S (max p q)).
 (** *)
 
+
 (** Un type est donc [kindable] si il existe un kind tel que l'on puisse associer ce kind à ce type dans l'environnement. *)
 Definition kindable e T := exists K, kinding e T K.
 
@@ -175,6 +188,7 @@ Inductive typing : env -> term -> typ -> Prop :=
   | TAbs : forall e t K T, typing (ConsK K e) t T -> typing e (Abs K t) (FAll K T)
   | TAppT : forall e t K T1 T2, typing e t (FAll K T1) -> kinding e T2 K -> typing e (AppT t T2) (tsubst 0 T2 T1).
 (** *)
+
 
 
 (** ** Propriétés de ces utilitaires  *)
@@ -196,6 +210,7 @@ Proof.
   + now apply f_equal2.
   + apply f_equal. now specialize (IHT (S c) d).
 Qed.
+
 
 (** Son équivalent sur [tsubst]: *)
 Lemma tsubst_tshift : forall T X Y U,
@@ -224,6 +239,8 @@ Proof.
     replace (S X + Y) with (S (0+(X+Y))); [|omega].
     apply tshift_tshift.
 Qed.
+(** *)
+
 
 (** On montre maintenant que [tshift_minus] est bien l'opération inverse de [tshift], ce qui fonctionne très bien dans un sens... *)
 Lemma tshift_minus_tshift : forall T x, tshift_minus x (tshift x T) = T.
@@ -237,6 +254,8 @@ Proof.
   + apply f_equal2; auto.
   + apply f_equal; auto.
 Qed.
+(** *)
+
 
 (** ...mais pas tout à fait dans l'autre, un lemme intermédiaire, [get_get] est nécessaire. Celui-ci montre qu'un kind et un type ne peuvent avoir le même indice dans l'environnement:  *)
 
@@ -251,10 +270,10 @@ Proof.
     - simpl in H0. destruct (get_type X e) eqn:?; [|discriminate].
       eapply IHX. eassumption. eassumption. reflexivity.
 Qed.
+(** *)
 
 
 (** Et enfin: *)
-
 Lemma tshift_tshift_minus : forall T e x U K,
                               get_type x e = Some U -> kinding e T K ->
                               tshift x (tshift_minus x T) = T.
@@ -275,9 +294,11 @@ Proof.
   + inv H. inv H0. apply f_equal. eapply IHT; try eassumption.
     simpl. rewrite H2. reflexivity.
 Qed.
+(** *)
+
+
 
 (** ** Une propriété du [kinding]: la cumulativité *)
-
 Lemma cumulativity : forall T e K1 K2, K1 <= K2 -> kinding e T K1 -> kinding e T K2.
 (** *)
 Proof.
@@ -292,9 +313,11 @@ Proof.
     - apply (IHT _ p). apply (max_lub_l _ _ _ Hle). assumption.
     - apply max_lub_r in Hle. now apply max_l.
 Qed.
+(** *)
+
+
 
 (** ** Induction mutuelle  *)
-
 (** On a besoin de faire une induction mutuelle.  *)
 Scheme wf_ind_mut := Induction for wf Sort Prop
 with kinding_ind_mut := Induction for kinding Sort Prop.
@@ -319,13 +342,6 @@ Proof.
   apply (wf_ind_mut P P0); assumption.
   apply (kinding_ind_mut P P0); assumption.
 Qed.
-
-
-
-        
-
-
-
 
 (** #<script src="jquery.min.js"></script>
 <script src="coqjs.js"></script># *)

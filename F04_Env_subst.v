@@ -1,23 +1,35 @@
+(* begin hide *)
 Require Import "F01_Defs".
 Require Import "F03_Insert_kind".
 Require Import "F05_Remove_var".
+(* end hide *)
+(** * IV. Substitutions dans l'environnement 
+Cette partie rassemble un enesemble de lemmes utilitaires étudiant le comportement de l'environnement lors de substitutions de types. *)
 
+
+(** [env_subst : var -> typ -> env -> env -> Prop] définit la subtitution d'une variable par un type dans un environnement. *)
 Inductive env_subst : var -> typ -> env -> env -> Prop :=
   |SubstSubst : forall T e K, kinding e T K  -> env_subst 0 T (ConsK K e) e
   |SubstConsK : forall X T e e', env_subst X T e e' -> 
                      forall K, env_subst (S X) (tshift 0 T) (ConsK K e) (ConsK K e')
   |SubstConsT : forall X T e e', env_subst X T e e' ->
                      forall U, env_subst (S X) (tshift 0 T) (ConsT U e) (ConsT (tsubst X T U) e').
+(** *)
 
 
-Lemma env_subst_get_kind_gt : forall e e' X T, env_subst X T e e' -> forall Y, X>Y -> get_kind Y e = get_kind Y e'. 
+(** On montre que les kinds précedemment accessibles le sont toujours après une substitution, d'abord pour ceux placés avant la subtitutions... *)
+Lemma env_subst_get_kind_gt : forall e e' X T, env_subst X T e e' -> forall Y, X>Y -> get_kind Y e = get_kind Y e'.
+(** *)
 Proof.
   intros e e' X T H. induction H; intros Y HY.
   + omega.
   + destruct Y; [reflexivity | apply IHenv_subst]. omega.
   + destruct Y; [reflexivity | apply IHenv_subst]. omega.
 Qed.
+(** *)
 
+
+(** Puis pour ceux placés après: *)
 Lemma env_subst_get_kind_lt : forall e e' X T, env_subst X T e e' -> forall Y, X<Y -> get_kind Y e = get_kind (Y-1) e'. 
 Proof.
   intros e e' X T H. induction H; intros Y HY.
@@ -25,10 +37,10 @@ Proof.
   + destruct Y; [omega |simpl]. rewrite <- minus_n_O. destruct Y; [omega |]. rewrite (IHenv_subst (S Y)). simpl. now rewrite <- minus_n_O. omega.
   + destruct Y; [omega | simpl].  rewrite <- minus_n_O. destruct Y; [omega |]. rewrite (IHenv_subst (S Y)). simpl. now rewrite <- minus_n_O. omega.
 Qed.
+(** *)
 
 
-
-
+(** On montre maintenant que what ? Ça devient kindable par magie ?^^ *) 
 Lemma env_subst_kindable : forall e e' X T K, env_subst X T e e' -> wf e -> wf e' -> get_kind X e = Some K -> kinding e' T K.
 Proof.
   intros e e' X T K H Hwf Hwf' Heq. induction H.
@@ -42,7 +54,7 @@ Proof.
 Qed.
 
 
-
+(** Et enfin, un second prédicat prouvable par induction mutuelle: La substitution d'une variable par un type dans un environnment préserve sa bonne forme et il en va de même pour le kinding. *)
 Lemma env_subst_wf_kinding :
   (forall e, wf e -> forall e' X T, env_subst X T e e' -> wf e')
    /\
@@ -70,3 +82,7 @@ Proof.
   + intros e U p q Hk IH e' X T H. simpl.
     constructor. apply IH. now constructor.
 Qed.
+
+
+(** #<script src="jquery.min.js"></script>#
+    #<script src="coqjs.js"></script># *)
