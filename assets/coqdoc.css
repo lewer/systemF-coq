@@ -5,14 +5,53 @@ body {
     counter-reset: sectionh2;
 }
 
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+a:hover {
+    color: #C02942;
+    text-decoration: inherit;
+}
+
 #page {
     display: block;
-    padding: 0px;
-    padding-bottom: 10px;
+    width: 900px;
     margin-left: auto;
     margin-right: auto;
+    padding: 0px;
+    padding-top: 30px;
+    padding-bottom: 10px;
+
     background-color: #FFFDF7;
+}
+
+#navbar {
+    position: fixed;
     width: 900px;
+    height: 40px;
+    right: 0px;
+    left: 0px;
+    margin-left: auto;
+    margin-right: auto;
+
+    background-color: rgb(255, 253, 247);
+    border-bottom: solid 1px #E0E0E0;
+    text-align: center;
+    font-size: 30px;
+}
+
+#navbar .nav_item {
+    display: inline-block;
+    line-height: 40px;
+
+    margin-left: 15px;
+    margin-right: 15px;
+}
+
+#navbar .nav_item.active {
+    color: #C02942;
 }
 
 #header {

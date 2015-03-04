@@ -30,7 +30,8 @@ Qed.
 
 
 (** Puis pour ceux placés après: *)
-Lemma env_subst_get_kind_lt : forall e e' X T, env_subst X T e e' -> forall Y, X<Y -> get_kind Y e = get_kind (Y-1) e'. 
+Lemma env_subst_get_kind_lt : forall e e' X T, env_subst X T e e' -> forall Y, X<Y -> get_kind Y e = get_kind (Y-1) e'.
+(** *)
 Proof.
   intros e e' X T H. induction H; intros Y HY.
   + destruct Y. omega. simpl. rewrite <- minus_n_O. reflexivity.
@@ -42,6 +43,7 @@ Qed.
 
 (** On montre maintenant que what ? Ça devient kindable par magie ?^^ *) 
 Lemma env_subst_kindable : forall e e' X T K, env_subst X T e e' -> wf e -> wf e' -> get_kind X e = Some K -> kinding e' T K.
+(** *)
 Proof.
   intros e e' X T K H Hwf Hwf' Heq. induction H.
   + now inv Heq.
@@ -58,7 +60,8 @@ Qed.
 Lemma env_subst_wf_kinding :
   (forall e, wf e -> forall e' X T, env_subst X T e e' -> wf e')
    /\
-    (forall e U K, kinding e U K -> forall e' X T, env_subst X T e e' -> kinding e' (tsubst X T U) K).
+   (forall e U K, kinding e U K -> forall e' X T, env_subst X T e e' -> kinding e' (tsubst X T U) K).
+(** *)
 Proof.
   apply wf_kinding_ind_mut.
   + intros e' X T H. inv H.
