@@ -104,5 +104,5 @@ Proof.
       apply infer_kind_correct; congruence.
 Qed.
 
-(** #<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>#
+(** #<script src="jquery.min.js"></script>#
     #<script src="coqjs.js"></script># *)
