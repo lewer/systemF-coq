@@ -245,8 +245,11 @@ tr.infrulemiddle hr {
 
 /* Pied de page */
 
-#footer { font-size: 65%;
-          font-family: sans-serif; }
+#footer {
+    display: none;
+    font-size: 65%;
+    font-family: sans-serif;
+}
 
 .id { display: inline; }
 
