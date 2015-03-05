@@ -215,6 +215,7 @@ h4.section {
     background-color: white;
     background-image: linear-gradient(transparent 15px, rgba(220,220,200,1) 16px, transparent 16px);
     background-size: 100% 16px;
+    border-top: solid 1px #CCCCBD;
  } 
 
 table.infrule {
