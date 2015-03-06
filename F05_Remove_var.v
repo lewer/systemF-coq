@@ -1,7 +1,12 @@
+(* begin hide *)
 Require Import "F01_Defs".
 Require Import Coq.Program.Equality.  (* needed for dependent induction *)
+(* end hide *)
+(** * V. Remove_var
+Cette partie étudie l'affaiblissement de l'environnement. *)
 
 
+(** [env_subst] est un prédicat inductif qui définit la subtitution d'une variable par un type dans un environnement. *)
 Fixpoint remove_var x e {struct e} : env :=
   match e with
     | Nil => Nil
@@ -14,9 +19,10 @@ Fixpoint remove_var x e {struct e} : env :=
                      | S x => ConsT (tshift_minus x T) (remove_var x e)
                    end
   end.
-
+(**  *)
 
 Lemma remove_var_get_kind_lt : forall X e x, X < x -> get_kind X e = get_kind X (remove_var x e).
+(**  *)
 Proof.
   induction X; intros.
   + destruct e.
@@ -28,9 +34,10 @@ Proof.
     - destruct x. inv H. apply IHX. omega.
     - destruct x. inv H. apply IHX. omega.
 Qed.
-
+(**  *)
 
 Lemma remove_var_get_kind_ge : forall X e x T, X >= x -> get_type x e = Some T -> get_kind (S X) e = get_kind X (remove_var x e).
+(**  *)
 Proof.
   induction X; intros.
   + destruct x. destruct e; try reflexivity.
@@ -44,7 +51,7 @@ Proof.
       simpl in H0. destruct (get_type x e) eqn:?. eapply IHX. omega.
       eassumption. discriminate.
 Qed.
-
+(**  *)
 
 
 
@@ -52,6 +59,7 @@ Lemma remove_var_wf_kinding :
   (forall e, wf e -> forall x U, get_type x e = Some U -> wf (remove_var x e))
      /\
         (forall e T K, kinding e T K -> forall x U, get_type x e = Some U -> kinding (remove_var x e) (tshift_minus x T) K).
+(**  *)
 Proof.
   apply wf_kinding_ind_mut; intros; simpl.
   + constructor.
@@ -75,11 +83,12 @@ Proof.
   + constructor. eapply (H (S x)). simpl.
     rewrite H0. reflexivity.
 Qed.
-
+(**  *)
 
 
 Lemma kinding_remove_var : forall e x T K,
    kinding (remove_var x e) T K -> forall U, get_type x e = Some U -> wf e -> kinding e (tshift x T) K.
+(**  *)
 Proof.
   intros e x T K H U HU Hwf. dependent induction H; simpl.
   * destruct (leb x X) eqn:?; comp; econstructor; try eassumption.
@@ -89,3 +98,7 @@ Proof.
   * constructor. eapply IHkinding. reflexivity.
     simpl. rewrite HU. reflexivity. now constructor.
 Qed.
+
+
+(** #<script src="jquery.min.js"></script>#
+    #<script src="coqjs.js"></script># *)

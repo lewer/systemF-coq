@@ -3,11 +3,11 @@ Require Import "F01_Defs".
 Require Import "F06_Regularity".
 (* end hide *)
 (** * II. Inférences de types et de kinds
-Dans cette partie du projet nous proposons des algorithmes d'inférence des kinds et des types, puis nous montrons qu'il fonctionnent correctement eu égard aux prédicats [kinding] et [typing] définis dans la #<a href="F01_Defs.html">#première partie#</a>#.*)
+Dans cette partie du projet nous proposons des algorithmes d'inférence de sorte et de type, puis nous montrons qu'ils fonctionnent correctement eu égard aux prédicats [kinding] et [typing] définis dans la #<a href="F01_Defs.html">#première partie#</a>#.*)
 
-(** ** Inférence de kinds *)
+(** ** Inférence de sorte *)
 
-(** Cette première fonction [infer_kind (e:env) (T:typ)] recherche le kind du type [T] dans l'environnement [e] *) 
+(** [infer_kind e T] recherche la sorte du type [T] dans l'environnement [e]. *) 
 Fixpoint infer_kind (e:env) (T:typ) : option kind :=
   match T with
     | TyVar X => get_kind X e
@@ -23,7 +23,7 @@ Fixpoint infer_kind (e:env) (T:typ) : option kind :=
 (** *)
 
 
-(** Et le lemme qui va avec: le kind trouvé par [infer_kind] est un bon kind si l'environnement est bien formé *)
+(** Et le lemme qui va avec : la sorte calculée par [infer_kind] est correcte si l'environnement est bien formé. *)
 Lemma infer_kind_correct : forall T e K,
   wf e -> infer_kind e T = Some K -> kinding e T K .
 (** *)
@@ -44,7 +44,7 @@ Qed.
 
 (** ** Inférence de types  *)
 
-(** Un petit utilitaire: on peut décider si deux types [T] et [U] sont égaux *)
+(** Un petit utilitaire: on peut décider si deux types [T] et [U] sont égaux. *)
 Lemma eq_typ_dec : forall (T U :typ), {T=U} + {T<>U}.
 (** *)
 Proof.
@@ -77,7 +77,7 @@ Fixpoint infer_type (e:env) (t:term) :=
 (** *)
 
 
-(** c'est nul, on est obligé d'utiliser regularity à cause du t_minus à cause qu'on a foiré typing, bref.. *)
+(** Et sa correction. *)
 Lemma infer_type_correct : forall t e T, wf e -> infer_type e t = Some T -> typing e t T.
 (** *)
 Proof.
@@ -111,6 +111,9 @@ Proof.
     - apply (cumulativity _ _ K2). assumption.
       apply infer_kind_correct; congruence.
 Qed.
+
+(** La preuve de ce dernier lemme recèle une petite subtilité : pour montrer que le [tshift_minus] (de l'inférence) et le [thsift] (du typing) s'annulent, on a besoin d'utiliser le lemme [tshift_tshift_minus]. Mais pour utliser ce lemme, on a besoin de montrer qu'un type est bien formé alors que l'on sait seulement que c'est la conclusion d'un jugement de typage. On utilise donc la régularité du système, cette propriété étant démontrée dans la partie VI ([regularity]). *)
+(** C'est ici, que le choix de n'avoir qu'une numérotation pour les types et les sortes à un impact. En effet, si nous avions choisi deux numérotations distinctes, il n'y aurait pas de [tshift] dans la définition de [typing] ni de [tshift_minus] dans l'inférence ... *)
 
 (** #<script src="jquery.min.js"></script>#
     #<script src="coqjs.js"></script># *)

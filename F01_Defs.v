@@ -5,18 +5,22 @@ Require Export Max.
 Require Export Omega.
 Require Export Relations.
 (* end hide *)
-(** * I. Définitions et utilitaires
-Nous allons ici décrire les définitions de base qui ont été choisies pour notre formalisation de système F. En dehors de l'usage des indices de de Bruijn, elles sont en grande partie similaires à celles proposées dans l'article qui sert de base à ce travail.*)
+(** * I. Définitions et premières propriétés
+
+Dans ce premier fichier, nous définissons les objets (environnements, termes, types et sortes) sur lesquels nous allons travailler. Nous avons choisit de représenter les lieurs avec des indices de de Bruinj, aussi nous définissons ici les fonctions auxilliaires (shift, subst, etc.) et prouvons les lemmes de commutation nécessaires.*)
+
 
 (** ** Quelques tactiques personnalisées *)
+(** Nous avons définit quelques tactiques, elles sont principalement utilisées dans le fin du développement. *)
 
-(** [inv], un utilitaire pour se débarrasser des cas d'inversion triviaux *)
+(** [inv] permet d'y voir plus clair après une inversion. C'est très pratique, l'inconvénient est que nous perdons définivement tout contrôle des noms introduits. *)
 Ltac inv H := inversion H; try subst; clear H.
-(** [comp], pour transformer les tests d'égalité booléens en des propriétés *)
+(** Dans les fonctions auxilliaires (shift, subst, etc.) nous avons souvent besoin de comparer des entiers. Après avoir essayé d'utiliser les lemmes comme [le_dec], [eq_dec_nat], ... nous avons finalement trouvé plus pratique d'utiliser des booléens. L'avantage est que les fonctions [leb] et [nat_compare] peuvent calculer (on peut simplifier certaines expressions avec [simpl]). L'inconvénient est que, lorsque l'on fait des distinctions de cas avec [destruct], les hypothèses introduites sont de la forme [leb x y = true], ce qui est difficilement utilisable (notamment par [omega]).
+La tactique [comp] tente de remédier à ce problème en réécrivant systématique les égalités de ce type. *)
 Ltac comp :=
   rewrite ?leb_iff in *; rewrite ?leb_iff_conv in *;
   rewrite <- ?nat_compare_lt in *; rewrite <- ?nat_compare_gt in *; rewrite ?nat_compare_eq_iff in *.
-(** [mysimpl], une tactique simpl capable de calculer [n + 0] et [0 + n] *)
+(** [mysimpl], permet de simplifier les expressions [n + 0] et [n - 0], c'est très pratique ... *)
 Ltac mysimpl :=
   simpl; rewrite <- ?minus_n_O; rewrite <- ?plus_n_O; simpl.
 (** *)
@@ -25,21 +29,18 @@ Ltac mysimpl :=
 
 (** ** Définitions de base *)
 
-(**  On utilise des indices de de Bruijn pour représenter les termes. Les variables liées sont dénotées par des nombres indiquant le nombre de lieurs les séparant du leur. L'intérêt de cette notation est de simplifier les problèmes d'α-conversion. *)
-
-(** [var] est le type des variables (l'indice en fait) et [kind] celui des sortes  *)
+(** On définit ici les les sortes ([kind]), les types ([typ]), les termes ([term]) et les environnements ([env]). *)
+(** On utilise des indices de de Bruijn pour représenter les lieurs. Les variables liées sont dénotées par des entiers indiquant le nombre de lieurs les séparant du leur (type [var]). *)
+(** Un environnement est une liste de déclarations de sortes et de types. Ces déclarations sont ordonnées dans la liste de manière à respecter les indices de de Bruijn. Suivant la suggestion du sujet, nous utilisons un seul environnement et une seule numérotation (la même pour les déclarations de sortes et de types). Nous trouvons qu'il est effectivement plus élégant de n'avoir qu'un seul environnement : cela permet de garder trace de l'entrelacement des déclarations. Par contre, deux numéroatiations distinctes permettrait de simplifier quelques petits problèmes : dans la fonction [remove_var] que faire quand l'on est censé enlever le type qui est en tête mais que c'est une sorte ? et dans l'inférence de types (nous y reviendrons).*)
 Definition var := nat.
-
+(**  *)
 Definition kind := nat.
 (** *)
-
-
-(** On définit les types et les termes. *)
 Inductive typ :=
   | TyVar : var -> typ
   | Arrow : typ -> typ -> typ
   | FAll : kind -> typ -> typ.
-
+(**  *)
 Inductive term :=
   | Var : var -> term
   | Lam : typ -> term -> term
@@ -47,9 +48,6 @@ Inductive term :=
   | Abs : kind -> term -> term
   | AppT : term -> typ -> term.
 (** *)
-
-
-(** Un environnement est une liste de déclarations de sortes et de types. Ces déclarations sont ordonnées dans la liste de manière à respecter les indices de de Bruijn. Nous avons choisi pour cela d'utiliser la même numérotation pour les types que pour les termes. *)
 Inductive env :=
   | Nil : env
   | ConsK : kind -> env -> env
@@ -62,18 +60,17 @@ Inductive env :=
 
 (** En raison de l'utilisation de la notation de de Bruijn, il convient de correctement mettre à jour les indices des variables lors des différentes opérations de substitutions par des termes ou des types. *)
 
-(** [tshift c T] incrémente les variables [>= c] dans le type [T] *)
-(* c=cutoff *)
-Fixpoint tshift (c:var) (T:typ) {struct T} : typ :=
+(** [tshift x T] incrémente les variables [>= x] dans le type [T]. *)
+Fixpoint tshift (x:var) (T:typ) {struct T} : typ :=
   match T with
-    | TyVar X => if leb c X then TyVar (S X) else TyVar X
-    | Arrow T1 T2 => Arrow (tshift c T1) (tshift c T2)
-    | FAll K T => FAll K (tshift (S c) T)
+    | TyVar X => if leb x X then TyVar (S X) else TyVar X
+    | Arrow T1 T2 => Arrow (tshift x T1) (tshift x T2)
+    | FAll K T => FAll K (tshift (S x) T)
   end.
 (** *)
 
 
-(** Idem mais décrémente les variables [<=x] *)
+(** Idem mais décrémente les variables [>=x]. *)
 Fixpoint tshift_minus (x : var) (T : typ) {struct T} : typ :=
   match T with
     | TyVar X => if leb x X then TyVar (X-1) else TyVar X
@@ -83,14 +80,14 @@ Fixpoint tshift_minus (x : var) (T : typ) {struct T} : typ :=
 (** *)
 
 
-(** [shift c t] incrémente les variables [>= c] dans le terme [t] *)
-Fixpoint shift (c:var) (t:term) : term :=
+(** [shift x t] incrémente les variables [>= x] dans le terme [t]. *)
+Fixpoint shift (x:var) (t:term) : term :=
   match t with
-    | Var x => if leb c x then Var (S x) else Var x
-    | Lam T t => Lam (tshift c T) (shift (S c) t)
-    | App t1 t2 => App (shift c t1) (shift c t2)
-    | Abs K t => Abs K (shift (S c) t)
-    | AppT t T => AppT (shift c t) (tshift c T)
+    | Var y => if leb x y then Var (S y) else Var y
+    | Lam T t => Lam (tshift x T) (shift (S x) t)
+    | App t1 t2 => App (shift x t1) (shift x t2)
+    | Abs K t => Abs K (shift (S x) t)
+    | AppT t T => AppT (shift x t) (tshift x T)
   end.
 (** *)
 
@@ -121,7 +118,7 @@ Fixpoint subst_typ X U t :=
 (** *)
 
 
-(** Enfin, [subst (x : nat) (t' : term) (t : term)] substitue [x] par le terme [t'] dans le terme [t] *)
+(** Enfin, [subst (x : nat) (t' : term) (t : term)] substitue [x] par le terme [t'] dans le terme [t]. *)
 Fixpoint subst (x : nat) (t' : term) t {struct t} :=
   match t with
   | Var y =>
@@ -139,10 +136,10 @@ Fixpoint subst (x : nat) (t' : term) t {struct t} :=
 
 
 
-(** ** Utilitaires d'environnements *)
+(** ** Jugements de typage *)
+(** Nous avons besoin de deux fonctions auxiliaires pour accéder à l'environnement avant de pouvoir définir les trois jugements de typage. *)
 
-(** [get_kind X e] renvoie la sorte de la variable d'indice [X] dans l'environnement [e].
-Attention aux décalages d'indices. *)
+(** [get_kind X e] renvoie la sorte de la variable d'indice [X] dans l'environnement [e]. Les indice d'un type dans un environnement réfèrent aux variables qui sont après lui dans cet environnement. On fait donc attention à décaler les indices pour que les indices du type que l'on renvoie réfèrent à l'environnement global. *)
 Fixpoint get_kind (X:var) (e:env) : option kind :=
   match (X, e) with
     | (0, ConsK K _) => Some K
@@ -164,7 +161,12 @@ Fixpoint get_type (x:var) (e:env) :=
 (** *)
 
 
-(** [wf : env -> Prop] explicite le fait pour un environnement d'être bien formé. Il s'agit de vérifier que l'environnement résulte bien d'un empilement de kinds et de types et que le [kind] de tout [typ] présent dans l'environnement y est également présent. Cette dernière vérification est représentée  par le prédicat [kinding: env -> typ -> kind -> Prop]. *)
+(** Il y a trois jugements de typage distincts à formaliser : le fait pour un environnement d'être bien formé, le fait pour un type d'avoir une certaine sorte, et le fait pour un terme d'avoir un certain type. On utlise des prédicats inductifs pour formaliser ces trois notions. *)
+(** Ainsi [wf e] est dérivable (prouvable) ssi l'environnement est bien formé, [kinding e T K] est prouvable ssi le type [T] a la sorte [K] dans l'environnement [e] et [typing e t T] est dérivable ssi le terme [t] a le type [T] dans l'environnement [e]. La structure des termes de preuve de ces inductifs reflète parfaitement la structure de l'arbre de dérivation du jugement correspondant. *)
+
+(** Contrairement à ce qui était suggeré, nous avons ici choisi  de définir [wf] et [kinding] mutuellement. Cela permet de rester plus fidèle à l'article. Nous trouvons intéressante l'idée de formaliser un résultat précis (à savoir, les théorèmes de l'article) et non pas "ce qui nous arrange" (à savoir, les mêmes théorèmes mais avec une définition de [wf] légèrement différente). Bien entendu, les deux formalisations sont équivalentes. D'ailleurs une autre approche possible aurait été d'utiliser la version modifiée de [wf] et de formaliser l'équivalence entre les deux. *)
+
+(** Bien sûr, ce choix a impliqué certaines complications (preuves à faire par induction mutuelle) mais nous avons réussi à les surmonter. *)
 Inductive wf : env -> Prop :=
   | WfNil : wf Nil
   | WfConsK : forall K e, wf e -> wf (ConsK K e)
@@ -175,12 +177,6 @@ with kinding : env -> typ -> kind -> Prop :=
   | KArrow : forall e T1 T2 p q, kinding e T1 p -> kinding e T2 q -> kinding e (Arrow T1 T2) (max p q)
   | KFAll : forall e T p q, kinding (ConsK q e) T p -> kinding e (FAll q T) (S (max p q)).
 (** *)
-
-
-(** Un type est donc [kindable] si il existe un kind tel que l'on puisse associer ce kind à ce type dans l'environnement. *)
-Definition kindable e T := exists K, kinding e T K.
-
-(** Enfin, nous définissons le prédicat [typing e t T] qui décrit le fait pour un terme [t] d'avoir le type [T] dans l'environnement [e]. *)
 Inductive typing : env -> term -> typ -> Prop :=
   | TVar : forall e x T, wf e -> get_type x e = Some T -> typing e (Var x) T
   | TLam : forall e t T1 T2, typing (ConsT T1 e) t (tshift 0 T2) -> typing e (Lam T1 t) (Arrow T1 T2)
@@ -190,10 +186,16 @@ Inductive typing : env -> term -> typ -> Prop :=
 (** *)
 
 
+(** Un type est donc [kindable] s'il existe une sorte qui puisse être associée à ce type dans l'environnement. *)
+Definition kindable e T := exists K, kinding e T K.
 
-(** ** Propriétés de ces utilitaires  *)
 
-(** Nous commençons par quelques propriétés de commutativité qui se révèleront utiles par la suite. En voici une première sur [tshift]: *)
+
+(** ** Lemmes de commutation *)
+
+(** Dans cette partie, nous prouvons les lemmes de commutation qu'implique l'utilisation des indices de de Bruijn. *)
+
+(** Commutation de deux [tshift]. *)
 Lemma tshift_tshift : forall T c d,
                         tshift c (tshift (c+d) T) = tshift (S (c+d)) (tshift c T).
 (** *)
@@ -212,7 +214,7 @@ Proof.
 Qed.
 
 
-(** Son équivalent sur [tsubst]: *)
+(** Commutation d'un [tsubst] et d'un [tshift]. *)
 Lemma tsubst_tshift : forall T X Y U,
         tsubst X (tshift (X+Y) U) (tshift (S (X+Y)) T) = tshift (X+Y) (tsubst X U T).
 (** *)
@@ -242,7 +244,7 @@ Qed.
 (** *)
 
 
-(** On montre maintenant que [tshift_minus] est bien l'opération inverse de [tshift], ce qui fonctionne très bien dans un sens... *)
+(** On montre maintenant que [tshift_minus] est bien l'opération inverse de [tshift], ce qui fonctionne très bien dans un sens ... *)
 Lemma tshift_minus_tshift : forall T x, tshift_minus x (tshift x T) = T.
 (** *)
 Proof.
@@ -257,8 +259,7 @@ Qed.
 (** *)
 
 
-(** ...mais pas tout à fait dans l'autre, un lemme intermédiaire, [get_get] est nécessaire. Celui-ci montre qu'un kind et un type ne peuvent avoir le même indice dans l'environnement:  *)
-
+(** ...mais pas tout à fait dans l'autre, un lemme intermédiaire, [get_get] est nécessaire. Celui-ci montre qu'une sorte et un type ne peuvent avoir le même indice dans l'environnement. *)
 Lemma get_get : forall X e x K T, get_kind X e = Some K -> get_type x e = Some T -> X<>x.
 (** *)
 Proof.
@@ -272,8 +273,7 @@ Proof.
 Qed.
 (** *)
 
-
-(** Et enfin: *)
+(** Les deux hypothèses de ce lemme permettent de suposer qu'il y a bien une variable de terme (et non de type) en [x] et donc qu'elle n'apparait pas dans [T]. *)
 Lemma tshift_tshift_minus : forall T e x U K,
                               get_type x e = Some U -> kinding e T K ->
                               tshift x (tshift_minus x T) = T.
@@ -298,7 +298,8 @@ Qed.
 
 
 
-(** ** Une propriété du [kinding]: la cumulativité *)
+(** ** Cumulativité *)
+(** Ici, nous démontrons la première propriété non triviale du système : la cumulativité. La preuve est une induction immédiate, la seule difficultée est la manipulation des [max] que [omega] ne connait pas ...  *)
 Lemma cumulativity : forall T e K1 K2, K1 <= K2 -> kinding e T K1 -> kinding e T K2.
 (** *)
 Proof.
@@ -318,10 +319,11 @@ Qed.
 
 
 (** ** Induction mutuelle  *)
-(** On a besoin de faire une induction mutuelle.  *)
+(** Pour faire les preuves par induction mutuelle, nous avons besoin d'un principe d'induction qui le permet. Ce n'est pas celui-ci qui est généré automatiquement par Coq, on l'obtient grace à la commande suivante. *)
 Scheme wf_ind_mut := Induction for wf Sort Prop
 with kinding_ind_mut := Induction for kinding Sort Prop.
 
+(** Cette version derivée de [wf_ind_mut] et [kinding_ind_mut] permet de montrer deux lemmes à la fois (il y a une conjonction dans la conclusion) sans refaire deux fois la preuve. *)
 Fact wf_kinding_ind_mut :
  ∀ (P : ∀ e : env, wf e → Prop) (P0 : ∀ (e : env) (t : typ) (k : kind), kinding e t k → Prop),
    P Nil WfNil

@@ -1,10 +1,14 @@
+(* begin hide *)
 Require Import "F01_Defs".
 Require Import "F03_Insert_kind".
 Require Import "F05_Remove_var".
+(* end hide *)
+(** * VI. Regularity *)
 
-
+(**  *)
 Lemma get_type_wf : forall x e T,
                       wf e -> get_type x e = Some T -> kindable e T.
+(**  *)
 Proof.
   induction x; intros.
   + destruct e; try discriminate.
@@ -24,18 +28,21 @@ Proof.
     eapply kinding_remove_var. assumption. reflexivity.
     econstructor; eassumption.
 Qed.
+(**  *)
 
-
+(**  *)
 Lemma typing_wf : forall e t T, typing e t T -> wf e.
+(**  *)
 Proof.
   intros e t T H. induction H; auto.
   now inv IHtyping.
   now inv IHtyping.
 Qed.
-
-    
+(**  *)
+(**  *)
 Lemma regularity : forall e t T,
                      typing e t T -> kindable e T.
+(**  *)
 Proof.
   intros e t T H. induction H.
   + now apply (get_type_wf x).
@@ -50,7 +57,7 @@ Proof.
   + inv IHtyping. inv H1. exists p. eapply tsubst_kinding.
     eassumption. constructor. reflexivity. assumption.
 Qed.
- 
 
 
-(* apply left A/\B ??? *)
+(** #<script src="jquery.min.js"></script>#
+    #<script src="coqjs.js"></script># *)

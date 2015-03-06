@@ -94,7 +94,7 @@ Lemma insert_kind_typing : forall e t T, typing e t T ->
 Proof.
   intros e t T Ht. induction Ht; intros X e' Hins.
   + simpl. destruct (leb X x) eqn:?.
-    * constructor. eapply insert_kind_wf_kinding; eassumption.
+    * econstructor. eapply insert_kind_wf_kinding; eassumption.
       rewrite (insert_kind_get_type _ _ _ Hins (S x)).
       replace (nat_compare X (S x)) with Lt. simpl.
       rewrite <- minus_n_O. now rewrite H0. symmetry. 
@@ -134,7 +134,7 @@ Qed.
 
 
 (** Et enfin, la conservation du kinding par subtitution dans un type proprement dite:*)
-Lemma tsubst_kinding : forall T e' K, kinding e' T K -> (** todo *)
+Lemma tsubst_kinding : forall T e' K, kinding e' T K ->
                                       forall X e L U, insert_kind X e e' -> get_kind X e' = Some L -> kinding e U L -> kinding e (tsubst X U T) K.
 (** *)
 Proof.
