@@ -1,8 +1,10 @@
 Require Import "F01_Defs".
 (** * VII. Normalisation
-*)
+Dans cette dernière partie nous allons mettre en place les différents éléments nécessaire à la preuve de la normalisation. *)
 
-(**  *)
+
+(** ** Relation de réduction *)
+(** Tout d'abord on définit une relation de réduction sur les termes du système F. Cela se fait en deux temps. D'abord on établit la définiton d'un pas de réduction, puis on applique la clôture réflexive transitive de cette relation. Cependant un problème inattendu s'est posé à nous : il nous a été impossible d'utiliser directement la définiton [clos_refl_trans_n1] de la bibliothèque de Coq, et nous avons donc dû la redéfinir manuellement. *)
 Inductive one_step_reduction : relation term :=
   |Lambda_reduction : forall K t T, 
                         one_step_reduction (AppT (Abs K t) T) (subst_typ 0 T t)
@@ -20,19 +22,19 @@ Inductive one_step_reduction : relation term :=
          forall T, one_step_reduction (AppT t T) (AppT t' T).
 (**  *)
 
-(** obligé de le redéfinir, celui de la bibliothèque
-ne marche pas ??!!? *)
+(** La définition issue de la bibliothèque standard de Coq : *)
 Inductive clos_refl_trans_n1 (x: term) : term -> Prop :=
     | rtn1_refl : clos_refl_trans_n1 x x
     | rtn1_trans (y z:term) :
         one_step_reduction y z -> clos_refl_trans_n1 x y -> clos_refl_trans_n1 x z.
 (**  *)
 
-(**  *)
+(** Et donc notre relation de réduction : *)
 Definition reduction := clos_refl_trans_n1. 
 (**  *)
 
-(**  *)
+(** ** Proptiétés de congruence *)
+(** Nous montrons maintenant que l'application et l'abstraction de termes et de types sont congruentes pour notre relation de réduction :  *)
 Lemma app_congruent : forall (t1 t2: term),
    reduction t1 t2 →  forall (u1 u2: term), reduction u1 u2 → reduction (App t1 u1) (App t2 u2).
 (**  *)

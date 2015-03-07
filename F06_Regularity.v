@@ -1,9 +1,10 @@
 Require Import "F01_Defs".
 Require Import "F03_Insert_kind".
 Require Import "F04_Remove_var".
-(** * VI. Regularité *)
+(** * VI. Regularité 
+Dans cette partie, nousn nous attelons à prouver la propriété de régularité suivante : Si un terme est typable avec un type [T] dans un environnement, alors ce type est "kindable" dans ce même environnemnt.*)
 
-(**  *)
+(** Pour cela nous avons besoin d'un premier lemme, stipulant que la possibilité de l'extraction d'un type dand un environnement bien formé entraîne la kindabilité de ce type dans cet environnement. *)
 Lemma get_type_wf : forall x e T,
                       wf e -> get_type x e = Some T -> kindable e T.
 (**  *)
@@ -28,7 +29,8 @@ Proof.
 Qed.
 (**  *)
 
-(**  *)
+
+(** Nous avons également besoin de montrer que si l'on peut typer un terme dans un environnement alors cet environnement est nécessairement bien formé.  *)
 Lemma typing_wf : forall e t T, typing e t T -> wf e.
 (**  *)
 Proof.
@@ -37,7 +39,9 @@ Proof.
   now inv IHtyping.
 Qed.
 (**  *)
-(**  *)
+
+
+(** Enfin, on prouve la propriété de régularité.  *)
 Lemma regularity : forall e t T,
                      typing e t T -> kindable e T.
 (**  *)
