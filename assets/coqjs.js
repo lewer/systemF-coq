@@ -44,10 +44,13 @@ function active(name) {
 function drawNav() {
     var nav = $('<div id="navbar">' +
         '<span class="nav_item '+active('F00_docindex.html')+'"><a href="F00_docindex.html" alt="Introduction et sommaire">ACCUEIL</a></span>' +
-        '<span class="nav_item '+active('F01_Defs.html')+'"><a href="F01_Defs.html" alt="Définitions de base">I</a></span>' +
-        '<span class="nav_item '+active('F02_Inference.html')+'"><a href="F02_Inference.html" alt="Inférence de kinds et de types">II</a></span>' +
-        '<span class="nav_item '+active('F03_Insert_kind.html')+'"><a href="F03_Insert_kind.html" alt="Insertion de kind">III</a></span>' +
-        '<span class="nav_item '+active('F04_Env_subst.html')+'"><a href="F04_Env_subst.html" alt="Subtitutions dans un environnement">IV</a></span>' +
+        '<span class="nav_item '+active('F01_Defs.html')+'"><a href="F01_Defs.html" alt="Defs">I</a></span>' +
+        '<span class="nav_item '+active('F02_Inference.html')+'"><a href="F02_Inference.html" alt="Inference">II</a></span>' +
+        '<span class="nav_item '+active('F03_Insert_kind.html')+'"><a href="F03_Insert_kind.html" alt="Insert_kind">III</a></span>' +
+        '<span class="nav_item '+active('F04_Remove_var.html')+'"><a href="F04_Remove_var.html" alt="Remove_var">IV</a></span>' +
+        '<span class="nav_item '+active('F05_Env_subst.html')+'"><a href="F05_Env_subst.html" alt="Env_subst">V</a></span>' +
+        '<span class="nav_item '+active('F06_Regularity.html')+'"><a href="F06_Regularity.html" alt="Regularity">VI</a></span>' +
+        '<span class="nav_item '+active('F07_Normalisation.html')+'"><a href="F07_Normalisation.html" alt="Normalisation">VII</a></span>' +
         '</div>')
     $("body").prepend(nav);
 }

@@ -1,9 +1,8 @@
-(* begin hide *)
+(**  *)
 Require Import "F01_Defs".
 Require Import "F03_Insert_kind".
-Require Import "F05_Remove_var".
-(* end hide *)
-(** * VI. Regularity *)
+Require Import "F04_Remove_var".
+(** * VI. Regularité *)
 
 (**  *)
 Lemma get_type_wf : forall x e T,

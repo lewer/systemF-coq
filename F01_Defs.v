@@ -1,13 +1,12 @@
-(* begin hide *)
+(**  *)
 Require Export Utf8.
 Require Export Arith.
 Require Export Max.
 Require Export Omega.
 Require Export Relations.
-(* end hide *)
 (** * I. Définitions et premières propriétés
 
-Dans ce premier fichier, nous définissons les objets (environnements, termes, types et sortes) sur lesquels nous allons travailler. Nous avons choisit de représenter les lieurs avec des indices de de Bruinj, aussi nous définissons ici les fonctions auxilliaires (shift, subst, etc.) et prouvons les lemmes de commutation nécessaires.*)
+Dans cette première partie, nous définissons les objets (environnements, termes, types et sortes) sur lesquels nous allons travailler. Nous avons choisit de représenter les lieurs avec des indices de de Bruinj, aussi nous définissons ici les fonctions auxilliaires (shift, subst, etc.) et prouvons les lemmes de commutation nécessaires.*)
 
 
 (** ** Quelques tactiques personnalisées *)
@@ -31,7 +30,7 @@ Ltac mysimpl :=
 
 (** On définit ici les les sortes ([kind]), les types ([typ]), les termes ([term]) et les environnements ([env]). *)
 (** On utilise des indices de de Bruijn pour représenter les lieurs. Les variables liées sont dénotées par des entiers indiquant le nombre de lieurs les séparant du leur (type [var]). *)
-(** Un environnement est une liste de déclarations de sortes et de types. Ces déclarations sont ordonnées dans la liste de manière à respecter les indices de de Bruijn. Suivant la suggestion du sujet, nous utilisons un seul environnement et une seule numérotation (la même pour les déclarations de sortes et de types). Nous trouvons qu'il est effectivement plus élégant de n'avoir qu'un seul environnement : cela permet de garder trace de l'entrelacement des déclarations. Par contre, deux numéroatiations distinctes permettrait de simplifier quelques petits problèmes : dans la fonction [remove_var] que faire quand l'on est censé enlever le type qui est en tête mais que c'est une sorte ? et dans l'inférence de types (nous y reviendrons).*)
+(** Un environnement est une liste de déclarations de sortes et de types. Ces déclarations sont ordonnées dans la liste de manière à respecter les indices de de Bruijn. Suivant la suggestion du sujet, nous utilisons un seul environnement pour les déclarations de sortes et de types. Nous trouvons que c'est effectivement plus élégant : cela permet de garder trace de l'entrelacement des déclarations. Nous avons aussi choisit de n'avoir qu'une seule numérotation pour les types et les sortes (par exemple [TVar 0] pointe vers la variable en tête qui n'est pas nécessairement une variable de terme), et nous avons un peu regretté ce choix. En effet, deux numérotiations distinctes permettrait de simplifier quelques petits problèmes : dans la fonction [remove_var] que faire quand l'on est censé enlever le type qui est en tête mais que c'est une sorte ? et dans l'inférence de type (cf. fin de l partie II).*)
 Definition var := nat.
 (**  *)
 Definition kind := nat.

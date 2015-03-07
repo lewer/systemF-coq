@@ -1,9 +1,8 @@
-(* begin hide *)
+(**  *)
 Require Import "F01_Defs".
 Require Import "F03_Insert_kind".
-Require Import "F05_Remove_var".
-(* end hide *)
-(** * IV. Substitutions dans l'environnement 
+Require Import "F04_Remove_var".
+(** * V. Substitution dans l'environnement 
 Cette partie étudie le comportement de l'environnement lors de la substitution de types. On montre trois lemmes intermédiaires puis la préservation de [wf] et [kinding]. *)
 
 

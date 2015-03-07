@@ -1,8 +1,7 @@
-(* begin hide *)
+(**  *)
 Require Import "F01_Defs".
 Require Import "F06_Regularity".
-(* end hide *)
-(** * II. Inférences de types et de kinds
+(** * II. Inférences de sorte et de type
 Dans cette partie du projet nous proposons des algorithmes d'inférence de sorte et de type, puis nous montrons qu'ils fonctionnent correctement eu égard aux prédicats [kinding] et [typing] définis dans la #<a href="F01_Defs.html">#première partie#</a>#.*)
 
 (** ** Inférence de sorte *)

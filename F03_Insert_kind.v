@@ -1,9 +1,9 @@
-(* begin hide *)
+(**  *)
 Require Import "F01_Defs".
-(* end hide *)
-(** * III. Insert kind
-Dans cette partie, nous nous concentrons sur la notion d'insertion d'un kind dans l'environnement. Nous allons notamment montrer un certain nombre de propriétés de stabilité, qui nous permettront finalement de prouver que le [kinding] est conservé lors d'une substitution de types. *)
+(** * III. Affaiblissement par déclaration d'une sorte
+Dans cette partie, nous étudions essentiellement l'affaiblissement de l'environnement par ajout d'une déclaration d'une variable de type. Nous utilisons pour cela un prédicat inductif caractérisant de tels affaiblissements d'un environnement. *)
 
+(** [insert_kind] est le prédicat inductif tel que [insert_kind X e e'] est prouvable ssi [e'] est une extension de [e] par une déclaration de sorte à l'indice [X] (et donc [e'] est l'affaiblissement de [e]). *)
 Inductive insert_kind : var -> env -> env -> Prop :=
 | Top : forall e K, insert_kind 0 e (ConsK K e)
 | BelowK : forall e e' X K, insert_kind X e e' ->
@@ -13,10 +13,11 @@ Inductive insert_kind : var -> env -> env -> Prop :=
 (** *)
 
 
+(** ** Préservation du typage *)
 
-(** ** Propriétés *)
+(** On montre ici deux lemmes intermédiaires puis on montre que l'affaiblissement par déclaration de sorte préserve les trois formes de typage. *)
 
-(** Le lemme suivant montre que l'ajout d'un kind dans un environnement n'empêche pas d'accéder à ses anciens éléments, tant que l'on tient compte de l'éventuel shifting provoqué par l'insertion. *)
+(** Le lemme suivant montre que l'ajout d'une sorte dans un environnement n'empêche pas d'accéder à ses anciens éléments, tant que l'on tient compte de l'éventuel shifting provoqué par l'insertion. *)
 Lemma insert_kind_get_kind : forall X e e', insert_kind X e e' ->
                 forall Y, get_kind Y e = (get_kind (if leb X Y then S Y else Y) e').
 (** *)
@@ -37,7 +38,7 @@ Qed.
 (** *)
 
 
-(** De même, on montre que les type accessibles avant insertion d'un kind le sont toujours après. *)
+(** De même, on montre que les type accessibles avant insertion d'une sorte le sont toujours après. *)
 Lemma insert_kind_get_type : forall X e e', insert_kind X e e' -> forall x, 
             get_type x e' = match nat_compare X x with
                               | Lt => option_map (tshift X) (get_type (x-1) e)
@@ -63,7 +64,8 @@ Qed.
 (** *)
 
 
-(** Nous montrons maintenant, en utilisant l'induction mutuelle définie dans la #<a href="F01_Defs.html">#partie I#</a>#, qu'un environnement bien fondé l'est toujours après l'insertion d'un kind et que le kinding est également conservé par une insertion de kind. Il est utile ici de faire une induction mutuelle car [kinding e _ _] nécessite [wf_env e]. *)
+(** On montre ici, que l'affaiblissement préserve les jugements de typage [wf] et [kinding].
+La preuve se fait par induction mutuelle sur le jugement de typage, c'est pour cela que nous montrons les deux propriétés en même temps. *)
 Lemma insert_kind_wf_kinding :
   (forall e, wf e -> forall X e', insert_kind X e e' -> wf e')
       /\
@@ -84,10 +86,7 @@ Qed.
 (** *)
 
 
-
-(** ** Conservation du typage et du kinding *)
-
-(** On a la conservation du typage: *)
+(** Et on montre ici la préservation du troisième jugement de typage : [typing]. *)
 Lemma insert_kind_typing : forall e t T, typing e t T ->
        forall X e', insert_kind X e e' -> typing e' (shift X t) (tshift X T).
 (** *)
@@ -103,16 +102,12 @@ Proof.
       rewrite (insert_kind_get_type _ _ _ Hins (x)).
       replace (nat_compare X (x)) with Gt. now rewrite H0. symmetry. 
       apply nat_compare_gt. apply leb_complete_conv in Heqb. omega.
-
   + simpl. constructor. specialize (IHHt (S X) (ConsT (tshift X T1) e')). specialize (tshift_tshift T2 0 X). intro Htt.
     rewrite plus_O_n in Htt. rewrite Htt. apply IHHt.
     now constructor.
-
   + econstructor. now apply IHHt1.
     now apply IHHt2.
-
   + constructor. apply IHHt. now constructor.
-
   + replace (tshift X (tsubst 0 T2 T1)) with (tsubst 0 (tshift X T2) (tshift (S X) T1)).
     apply (TAppT _ _ K). replace (FAll K (tshift (S X) T1)) with (tshift X (FAll K T1)).
     now apply IHHt. reflexivity.
@@ -122,8 +117,11 @@ Proof.
 Qed.
 (** *)
 
+(** ** Préservation de [kinding] par substitution  *)
 
-(** Mais un autre lemme est nécessaire, le fait que [kinding e _ _] implique [wf e] *)
+(** Ici, nous profitons de [insert_kind] pour exprimer le fait que la substitution préserve [kinding]. *)
+
+(**  *)
 Lemma kinding_wf : forall e T K, kinding e T K -> wf e.
 (** *)
 Proof.
@@ -133,7 +131,7 @@ Qed.
 (** *)
 
 
-(** Et enfin, la conservation du kinding par subtitution dans un type proprement dite:*)
+(**  *)
 Lemma tsubst_kinding : forall T e' K, kinding e' T K ->
                                       forall X e L U, insert_kind X e e' -> get_kind X e' = Some L -> kinding e U L -> kinding e (tsubst X U T) K.
 (** *)
