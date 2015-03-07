@@ -1,4 +1,3 @@
-(**  *)
 Require Import "F01_Defs".
 (** * III. Affaiblissement par déclaration d'une sorte
 Dans cette partie, nous étudions essentiellement l'affaiblissement de l'environnement par ajout d'une déclaration d'une variable de type. Nous utilisons pour cela un prédicat inductif caractérisant de tels affaiblissements d'un environnement. *)

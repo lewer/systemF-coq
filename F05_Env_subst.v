@@ -1,4 +1,3 @@
-(**  *)
 Require Import "F01_Defs".
 Require Import "F03_Insert_kind".
 Require Import "F04_Remove_var".

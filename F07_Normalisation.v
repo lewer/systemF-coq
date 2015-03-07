@@ -1,4 +1,3 @@
-(**  *)
 Require Import "F01_Defs".
 (** * VII. Normalisation
 *)

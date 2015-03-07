@@ -1,4 +1,3 @@
-(**  *)
 Require Import "F01_Defs".
 Require Import "F06_Regularity".
 (** * II. Inférences de sorte et de type

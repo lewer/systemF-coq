@@ -1,4 +1,3 @@
-(**  *)
 Require Export Utf8.
 Require Export Arith.
 Require Export Max.

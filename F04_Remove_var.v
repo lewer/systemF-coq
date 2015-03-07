@@ -1,4 +1,3 @@
-(**  *)
 Require Import "F01_Defs".
 Require Import Coq.Program.Equality.  (* needed for dependent induction *)
 (** * IV. Affaiblissement par déclaration d'un type
@@ -109,8 +108,5 @@ Proof.
   + constructor. eapply (H (S x)). simpl.
     rewrite H0. reflexivity.
 Qed.
-(**  *)
-
-
 (** #<script src="jquery.min.js"></script>#
     #<script src="coqjs.js"></script># *)
