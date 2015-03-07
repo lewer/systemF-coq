@@ -5,20 +5,20 @@ Require Export Omega.
 Require Export Relations.
 (** * I. Définitions et premières propriétés
 
-Dans cette première partie, nous définissons les objets (environnements, termes, types et sortes) sur lesquels nous allons travailler. Nous avons choisit de représenter les lieurs avec des indices de de Bruinj, aussi nous définissons ici les fonctions auxilliaires (shift, subst, etc.) et prouvons les lemmes de commutation nécessaires.*)
+Dans cette première partie, nous définissons les objets (environnements, termes, types et sortes) sur lesquels nous allons travailler. Nous avons choisit de représenter les lieurs avec des indices de de Bruijn, nous y définissons également les fonctions auxilliaires (shift, subst, etc.) et prouvons les lemmes de commutation nécessaires.*)
 
 
 (** ** Quelques tactiques personnalisées *)
-(** Nous avons définit quelques tactiques, elles sont principalement utilisées dans le fin du développement. *)
+(** Nous avons définit quelques tactiques qui ont principalement utilisées dans le fin du développement. *)
 
 (** [inv] permet d'y voir plus clair après une inversion. C'est très pratique, l'inconvénient est que nous perdons définivement tout contrôle des noms introduits. *)
 Ltac inv H := inversion H; try subst; clear H.
-(** Dans les fonctions auxilliaires (shift, subst, etc.) nous avons souvent besoin de comparer des entiers. Après avoir essayé d'utiliser les lemmes comme [le_dec], [eq_dec_nat], ... nous avons finalement trouvé plus pratique d'utiliser des booléens. L'avantage est que les fonctions [leb] et [nat_compare] peuvent calculer (on peut simplifier certaines expressions avec [simpl]). L'inconvénient est que, lorsque l'on fait des distinctions de cas avec [destruct], les hypothèses introduites sont de la forme [leb x y = true], ce qui est difficilement utilisable (notamment par [omega]).
+(** Dans les fonctions auxilliaires (shift, subst, etc.) nous avons souvent besoin de comparer des entiers. Après avoir essayé d'utiliser des lemmes comme [le_dec], [eq_dec_nat], ... nous avons finalement trouvé plus pratique d'utiliser des booléens. L'avantage est que les fonctions [leb] et [nat_compare] peuvent calculer (on peut simplifier certaines expressions avec [simpl]). L'inconvénient est que, lorsque l'on fait des distinctions de cas avec [destruct], les hypothèses introduites sont de la forme [leb x y = true], ce qui est difficilement utilisable (notamment par [omega]).
 La tactique [comp] tente de remédier à ce problème en réécrivant systématique les égalités de ce type. *)
 Ltac comp :=
   rewrite ?leb_iff in *; rewrite ?leb_iff_conv in *;
   rewrite <- ?nat_compare_lt in *; rewrite <- ?nat_compare_gt in *; rewrite ?nat_compare_eq_iff in *.
-(** [mysimpl], permet de simplifier les expressions [n + 0] et [n - 0], c'est très pratique ... *)
+(** [mysimpl], permet de simplifier les expressions [n + 0] et [n - 0], ce qui se révèle pratique ... *)
 Ltac mysimpl :=
   simpl; rewrite <- ?minus_n_O; rewrite <- ?plus_n_O; simpl.
 (** *)
@@ -27,9 +27,9 @@ Ltac mysimpl :=
 
 (** ** Définitions de base *)
 
-(** On définit ici les les sortes ([kind]), les types ([typ]), les termes ([term]) et les environnements ([env]). *)
+(** On définit ici les sortes ([kind]), les types ([typ]), les termes ([term]) et les environnements ([env]). *)
 (** On utilise des indices de de Bruijn pour représenter les lieurs. Les variables liées sont dénotées par des entiers indiquant le nombre de lieurs les séparant du leur (type [var]). *)
-(** Un environnement est une liste de déclarations de sortes et de types. Ces déclarations sont ordonnées dans la liste de manière à respecter les indices de de Bruijn. Suivant la suggestion du sujet, nous utilisons un seul environnement pour les déclarations de sortes et de types. Nous trouvons que c'est effectivement plus élégant : cela permet de garder trace de l'entrelacement des déclarations. Nous avons aussi choisit de n'avoir qu'une seule numérotation pour les types et les sortes (par exemple [TVar 0] pointe vers la variable en tête qui n'est pas nécessairement une variable de terme), et nous avons un peu regretté ce choix. En effet, deux numérotiations distinctes permettrait de simplifier quelques petits problèmes : dans la fonction [remove_var] que faire quand l'on est censé enlever le type qui est en tête mais que c'est une sorte ? et dans l'inférence de type (cf. fin de l partie II).*)
+(** Un environnement est une liste de déclarations de sortes et de types. Ces déclarations sont ordonnées dans la liste de manière à respecter les indices de de Bruijn. Suivant la suggestion du sujet, nous utilisons un seul environnement pour les déclarations de sortes et de types. Nous trouvons que c'est effectivement plus élégant : cela permet de garder trace de l'entrelacement des déclarations. Nous avons aussi choisit de n'avoir qu'une seule numérotation pour les types et les sortes (par exemple [TVar 0] pointe vers la variable en tête qui n'est pas nécessairement une variable de terme), mais nous avons un peu regretté ce choix. En effet, l'utilisation deux numérotations distinctes nous aurait permis de simplifier certains problèmes : par exemple, dans la fonction [remove_var], que faire quand l'on est censé enlever le type qui est en tête mais que c'est une sorte ? et aussi dans l'inférence de type (cf. fin de la #<a href="F01_Defs.html">#partie II#</a>#).*)
 Definition var := nat.
 (**  *)
 Definition kind := nat.
@@ -90,7 +90,7 @@ Fixpoint shift (x:var) (t:term) : term :=
 (** *)
 
 
-(** [tsubst (X:nat) (U:typ) (T:typ)] substitue [X] par le type [U] dans le type [T]. Il faut penser à "shifter" lorsque l'on traverse un [FAll], en raison du choix d'utiliser un unique compteur pour les types et les kinds dans l'environnement. *)
+(** [tsubst X U T] substitue [X] par le type [U] dans le type [T]. Il faut penser à "shifter" lorsque l'on traverse un [FAll], en raison du choix d'utiliser un unique compteur pour les types et les kinds dans l'environnement. *)
 Fixpoint tsubst (X:nat) (U:typ) (T:typ) :=
   match T with
     | TyVar Y => match nat_compare X Y with
@@ -137,7 +137,7 @@ Fixpoint subst (x : nat) (t' : term) t {struct t} :=
 (** ** Jugements de typage *)
 (** Nous avons besoin de deux fonctions auxiliaires pour accéder à l'environnement avant de pouvoir définir les trois jugements de typage. *)
 
-(** [get_kind X e] renvoie la sorte de la variable d'indice [X] dans l'environnement [e]. Les indice d'un type dans un environnement réfèrent aux variables qui sont après lui dans cet environnement. On fait donc attention à décaler les indices pour que les indices du type que l'on renvoie réfèrent à l'environnement global. *)
+(** [get_kind X e] renvoie la sorte de la variable d'indice [X] dans l'environnement [e]. Les indice d'un type dans un environnement réfèrent aux variables qui sont après lui dans cet environnement. On fait donc attention à décaler les indices pour que ceux du type que l'on renvoie réfèrent à l'environnement global. *)
 Fixpoint get_kind (X:var) (e:env) : option kind :=
   match (X, e) with
     | (0, ConsK K _) => Some K
@@ -271,7 +271,7 @@ Proof.
 Qed.
 (** *)
 
-(** Les deux hypothèses de ce lemme permettent de suposer qu'il y a bien une variable de terme (et non de type) en [x] et donc qu'elle n'apparait pas dans [T]. *)
+(** Les deux hypothèses de ce lemme permettent de suposer qu'il y a bien une variable de terme (et non de type) en [x] et donc qu'elle n'apparaît pas dans [T]. *)
 Lemma tshift_tshift_minus : forall T e x U K,
                               get_type x e = Some U -> kinding e T K ->
                               tshift x (tshift_minus x T) = T.
@@ -297,7 +297,7 @@ Qed.
 
 
 (** ** Cumulativité *)
-(** Ici, nous démontrons la première propriété non triviale du système : la cumulativité. La preuve est une induction immédiate, la seule difficultée est la manipulation des [max] que [omega] ne connait pas ...  *)
+(** Ici, nous démontrons la première propriété non triviale du système : la cumulativité. La preuve est une induction immédiate, la seule difficultée est la manipulation des [max] que [omega] ne connaît pas ...  *)
 Lemma cumulativity : forall T e K1 K2, K1 <= K2 -> kinding e T K1 -> kinding e T K2.
 (** *)
 Proof.
@@ -317,7 +317,7 @@ Qed.
 
 
 (** ** Induction mutuelle  *)
-(** Pour faire les preuves par induction mutuelle, nous avons besoin d'un principe d'induction qui le permet. Ce n'est pas celui-ci qui est généré automatiquement par Coq, on l'obtient grace à la commande suivante. *)
+(** Pour faire les preuves par induction mutuelle, nous avons besoin d'un principe d'induction qui le permet contrairement à celui qui est généré automatiquement par Coq. On l'obtient grace à la commande suivante : *)
 Scheme wf_ind_mut := Induction for wf Sort Prop
 with kinding_ind_mut := Induction for kinding Sort Prop.
 

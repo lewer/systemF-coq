@@ -1,7 +1,7 @@
 Require Import "F01_Defs".
 Require Import Coq.Program.Equality.  (* needed for dependent induction *)
 (** * IV. Affaiblissement par déclaration d'un type
-Dans cette partie, nous étudions une deuxième forme d'affaiblissement de l'environnement : l'affaiblissement par ajout d'une déclaration d'une variable de terme. Cette fois, nous n'utilisons pas un prédicat inductif mais une fonction qui enlève une telle déclaration dans un environnement. En effet, nous pouvons cette fois nous permettre une telle fonction car quand l'on enlève une variable de terme dans un environnement bien formé il reste bien formé (ce qui n'était pas vrai avec les variables de type). *)
+Dans cette partie, nous étudions une deuxième forme d'affaiblissement de l'environnement : l'affaiblissement par ajout d'une déclaration d'une variable de terme. Cette fois, nous n'utilisons pas un prédicat inductif mais une fonction qui enlève une telle déclaration dans un environnement. En effet, nous pouvons nous permettre une telle fonction car quand on enlève une variable de terme dans un environnement bien formé il reste bien formé (ce qui n'était pas vrai pour les variables de type). *)
 
 
 (** [remove_var] est la fonction telle que [remove_var x e] est l'environnement [e] dans lequel on a supprimé la déclaration de la variable de terme [x]. Si [x] est en fait une variable de type, le résultat a peu de sens. *)
@@ -77,7 +77,7 @@ Qed.
 
 (** ** Réciproque  *)
 
-(** Ici, nous montrons donc une réciproque à l'affaiblissement : nous montrons que les jugements de typage [wf] et [kinding], qui n'utilisent que les variables de type, sont préservés par suppression des variables de terme. *)
+(** Ici, nous montrons donc une réciproque à l'affaiblissement : nous montrons que les jugements de typage [wf] et [kinding] qui n'utilisent que des variables de type sont préservés par suppression des variables de terme. *)
 
 (** Une fois de plus, le lemme est prouvé par induction mutuelle sur [wf] et [kinding]. *)
 Lemma remove_var_wf_kinding : 

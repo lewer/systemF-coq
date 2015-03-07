@@ -213,7 +213,7 @@ h4.section {
 
     /* Lines ! */
     background-color: white;
-    background-image: linear-gradient(transparent 15px, rgba(220,220,200,0.6) 16px, transparent 16px);
+    background-image: linear-gradient(transparent 15px, rgba(220,220,200,0.3) 16px, transparent 16px);
     background-size: 100% 16px;
     /*border-top: solid 1px #CCCCBD;*/
  } 

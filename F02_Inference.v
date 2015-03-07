@@ -110,8 +110,8 @@ Proof.
       apply infer_kind_correct; congruence.
 Qed.
 
-(** La preuve de ce dernier lemme recèle une petite subtilité : pour montrer que le [tshift_minus] (de l'inférence) et le [thsift] (du typing) s'annulent, on a besoin d'utiliser le lemme [tshift_tshift_minus]. Mais pour utliser ce lemme, on a besoin de montrer qu'un type est bien formé alors que l'on sait seulement que c'est la conclusion d'un jugement de typage. On utilise donc la régularité du système, cette propriété étant démontrée dans la partie VI ([regularity]). *)
-(** C'est ici, que le choix de n'avoir qu'une numérotation pour les types et les sortes à un impact. En effet, si nous avions choisi deux numérotations distinctes, il n'y aurait pas de [tshift] dans la définition de [typing] ni de [tshift_minus] dans l'inférence ... *)
+(** La preuve de ce dernier lemme recèle une petite subtilité : pour montrer que le [tshift_minus] (de l'inférence) et le [thsift] (du typing) s'annulent, on a besoin d'utiliser le lemme [tshift_tshift_minus]. Mais pour utiliser ce lemme, on a besoin de montrer qu'un type est bien formé alors que l'on sait seulement que c'est la conclusion d'un jugement de typage. On utilise donc la régularité du système, cette propriété étant démontrée dans la partie VI ([regularity]). *)
+(** C'est ici, que le choix de n'avoir qu'une numérotation pour les types et les sortes à un impact. En effet, si nous avions choisi deux numérotations distinctes, il n'y aurait pas de [tshift] dans la définition de [typing] ni de [tshift_minus] dans l'inférence. *)
 
 (** #<script src="jquery.min.js"></script>#
     #<script src="coqjs.js"></script># *)
