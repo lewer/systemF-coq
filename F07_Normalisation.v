@@ -95,5 +95,50 @@ intros t1 t2 K H. induction H as [|t2 t3].
 Qed.
 (**  *)
 
+(** *)
+Inductive neutral : term -> Prop :=
+  |var_neutral : forall x, neutral (Var x)
+  |app_neutral : forall t1 t2, neutral (App t1 t2)
+  |appt_neutral : forall t T, neutral (AppT t T).
+(** *)
+                                     
+(** *)
+Inductive normal : term -> Prop := 
+  |var_normal : forall x, normal (Var x)
+  |lam_normal : forall T t, normal t -> normal (Lam T t)
+  |app_normal : forall t1 t2, normal t1 -> normal t2 -> 
+                              neutral t1 -> normal (App t1 t2)
+  |abs_normal : forall K t, normal t -> normal (Abs K t)
+  |appt_normal : forall t T, normal t -> neutral t -> normal (AppT t T).
+(** *)
+
+(** *)
+Lemma neutral_preserved_subst_typ : forall t X T, neutral t -> neutral (subst_typ X T t).
+Proof.
+intros t X T H.
+induction t as [|U t|T1 H1 T2 H2|h|].
+- assumption. 
+- inversion H.  
+- constructor.
+- inversion H.
+- constructor.
+Qed. 
+(** *)
+
+Lemma normal_preserved_subst_typ : forall t X T, normal t -> normal (subst_typ X T t).
+intro t. induction t; intros X T H.
+- assumption.
+- simpl. constructor. apply IHt. inversion H; assumption.
+- simpl. inversion H. constructor. 
+    now apply IHt1.
+    now apply IHt2.
+    now apply neutral_preserved_subst_typ.
+- simpl. constructor. apply IHt. inversion H; assumption.
+- simpl.inversion H. constructor.
+    now apply IHt.
+    now apply neutral_preserved_subst_typ.
+Qed.
+(** *)
+
 (** #<script src="jquery.min.js"></script>#
-    #<script src="coqjs.js"></script># *)
+#<script src="coqjs.js"></script># *)
