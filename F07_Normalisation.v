@@ -143,5 +143,19 @@ intro t. induction t; intros X T H.
 Qed.
 (** *)
 
+(** Conclusion : les indices de de Brujin permettent de raisonner sur des termes du \lambda-calcul 
+sans se soucier des noms des variables et d'éventuels renommages.
+Cependant, ils rendent parfois difficile la compréhension des énoncés de propositions,
+ponctués de décalages d'indices. De plus, les démonstrations avec indices de de Brujin ne
+correspondent pas aux démonstrations faites sur papier, dans lesquelles on raisonne
+informellement (mais rigoureusement) avec des arguments comme "quitte à renommer
+les variables liées, on peut supposer la variable [x] libre dans [t]". 
+D'autres approches existent pour représenter les termes du \lambda-calcul, 
+comme par exemple les ensembles nominaux; le renommage des variables
+s'exprime alors comme une permutation agissant sur un terme. Cette approche
+permet des preuves machines similaires aux preuves papiers, mais n'est pas encore
+formalisée dans Coq. Ceci sera l'objet de futurs travaux.
+*) 
+
 (** #<script src="jquery.min.js"></script>#
 #<script src="coqjs.js"></script># *)
