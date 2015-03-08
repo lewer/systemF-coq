@@ -159,17 +159,19 @@ h4.section {
     line-height: 125%;
     color: black;
     padding: 10px;
+    padding-left: 20px;
+    padding-right: 20px;
     /*background-color: #90bdff;*/
     border-style: plain;
     text-align: justify;
-
-
 }
 #main .doc .titre {
     display: block;
     text-align: center;
-
-    font-size: 200%;
+font-size: 250%;
+    margin-bottom: 30px;
+    color: #C02942;
+    font-weight: bolder;
 }
 
 .inlinecode { 

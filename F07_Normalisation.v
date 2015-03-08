@@ -4,7 +4,7 @@ Dans cette dernière partie nous allons mettre en place les différents élémen
 
 
 (** ** Relation de réduction *)
-(** Tout d'abord on définit une relation de réduction sur les termes du système F. Cela se fait en deux temps. D'abord on établit la définiton d'un pas de réduction, puis on applique la clôture réflexive transitive de cette relation. Cependant un problème inattendu s'est posé à nous : il nous a été impossible d'utiliser directement la définiton [clos_refl_trans_n1] de la bibliothèque de Coq, et nous avons donc dû la redéfinir manuellement. Pour une raison inconnue, quand on veut appliquer le constructeur [rtn1_refl]
+(** Tout d'abord on définit une relation de réduction sur les termes du système F. Cela se fait en deux temps. D'abord on établit la définition d'un pas de réduction, puis on prend la clôture réflexive transitive de cette relation. Cependant un problème inattendu s'est posé à nous : il nous a été impossible d'utiliser directement la définiton [clos_refl_trans_n1] de la bibliothèque de Coq, et nous avons donc dû la redéfinir manuellement. Pour une raison inconnue, quand on veut appliquer le constructeur [rtn1_refl]
 pour prouver [clos_refl_trans_n1], Coq produit une erreur d'unification. *)
 Inductive one_step_reduction : relation term :=
   |Lambda_reduction : forall K t T, 
@@ -35,7 +35,7 @@ Definition reduction := clos_refl_trans_n1.
 (**  *)
 
 (** ** Proptiétés de congruence *)
-(** Nous montrons maintenant que l'application et l'abstraction de termes et de types sont congruentes pour notre relation de réduction :  *)
+(** Nous montrons maintenant que l'application et l'abstraction, de termes et de types, sont congruentes pour notre relation de réduction :  *)
 Lemma app_congruent : forall (t1 t2: term),
    reduction t1 t2 →  forall (u1 u2: term), reduction u1 u2 → reduction (App t1 u1) (App t2 u2).
 (**  *)
@@ -96,7 +96,7 @@ intros t1 t2 K H. induction H as [|t2 t3].
 Qed.
 (**  *)
 
-(** Un terme est neutre si ce n'est ni une \lambda-abstraction, ni une \Lambda-abastraction *)
+(** Un terme est neutre si ce n'est ni une #&lambda;#-abstraction, ni une #&Lambda;#-abastraction : *)
 Inductive neutral : term -> Prop :=
   |var_neutral : forall x, neutral (Var x)
   |app_neutral : forall t1 t2, neutral (App t1 t2)
@@ -117,6 +117,7 @@ Inductive normal : term -> Prop :=
 
 (** *)
 Lemma neutral_preserved_subst_typ : forall t X T, neutral t -> neutral (subst_typ X T t).
+(**  *)
 Proof.
 intros t X T H.
 induction t as [|U t|T1 H1 T2 H2|h|].
@@ -129,6 +130,8 @@ Qed.
 (** *)
 
 Lemma normal_preserved_subst_typ : forall t X T, normal t -> normal (subst_typ X T t).
+(**  *)
+Proof.
 intro t. induction t; intros X T H.
 - assumption.
 - simpl. constructor. apply IHt. inversion H; assumption.
@@ -137,20 +140,21 @@ intro t. induction t; intros X T H.
     now apply IHt2.
     now apply neutral_preserved_subst_typ.
 - simpl. constructor. apply IHt. inversion H; assumption.
-- simpl.inversion H. constructor.
+- simpl. inversion H. constructor.
     now apply IHt.
     now apply neutral_preserved_subst_typ.
 Qed.
 (** *)
 
-(** Conclusion : les indices de de Brujin permettent de raisonner sur des termes du \lambda-calcul 
+(** * Conclusion
+Les indices de de Brujin permettent de raisonner sur des termes du #&Lambda;#-calcul 
 sans se soucier des noms des variables et d'éventuels renommages.
 Cependant, ils rendent parfois difficile la compréhension des énoncés de propositions,
-ponctués de décalages d'indices. De plus, les démonstrations avec indices de de Brujin ne
+ponctués de décalages d'indices. De plus, les démonstrations avec indices de de Bruijn ne
 correspondent pas aux démonstrations faites sur papier, dans lesquelles on raisonne
 informellement (mais rigoureusement) avec des arguments comme "quitte à renommer
 les variables liées, on peut supposer la variable [x] libre dans [t]". 
-D'autres approches existent pour représenter les termes du \lambda-calcul, 
+D'autres approches existent pour représenter les termes du #&Lambda;#-calcul, 
 comme par exemple les ensembles nominaux; le renommage des variables
 s'exprime alors comme une permutation agissant sur un terme. Cette approche
 permet des preuves machines similaires aux preuves papiers, mais n'est pas encore
