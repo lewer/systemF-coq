@@ -39,7 +39,7 @@ Qed.
 (** *)
 
 
-(** Si l'on réussi à dériver [env_subst e e' X T K] avec des environnements bien formés, alors le type par lequel on substitue est nécessairement bien formé aussi. La preuve fait appel à [remove_var]. *) 
+(** Si l'on réussit à dériver [env_subst e e' X T K] avec des environnements bien formés, alors le type par lequel on substitue est nécessairement bien formé aussi. La preuve fait appel à [remove_var]. *) 
 Lemma env_subst_kindable : forall e e' X T K, env_subst X T e e' -> wf e -> wf e' -> get_kind X e = Some K -> kinding e' T K.
 (** *)
 Proof.

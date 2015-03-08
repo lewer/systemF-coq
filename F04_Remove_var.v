@@ -22,9 +22,9 @@ Fixpoint remove_var x e {struct e} : env :=
 
 (** ** Préservation du typage  *)
 
-(** Pour cet affaiblissement, nous n'avons montré la préservation que d'un des jugement de typage : [kinding]. Par contre, l'on montre ensuite une réciproque (ce qui est plus intéressant). *)
+(** Pour cet affaiblissement, nous n'avons montré la préservation que d'un des jugement de typage : [kinding]. On montre ensuite une réciproque (ce qui est plus intéressant). *)
 
-(** Dans tous les lemmes qui suivent les hypothèses [get_type e x = Some _] servent à s'assurer que la variable que l'on supprime est bien une variable de terme. Nous n'aurions pas besoin d'une telle hypothèse si nous avions choisit deux numérotations différentes pour les types et les sortes. *)
+(** Dans tous les lemmes qui suivent, les hypothèses [get_type e x = Some _] servent à s'assurer que la variable que l'on supprime est bien une variable de terme. Nous n'aurions pas besoin d'une telle hypothèse si nous avions choisi deux numérotations différentes pour les types et les sortes. *)
 
 (**  *)
 Lemma remove_var_get_kind_lt : forall X e x, X < x -> get_kind X e = get_kind X (remove_var x e).

@@ -4,7 +4,8 @@ Dans cette dernière partie nous allons mettre en place les différents élémen
 
 
 (** ** Relation de réduction *)
-(** Tout d'abord on définit une relation de réduction sur les termes du système F. Cela se fait en deux temps. D'abord on établit la définiton d'un pas de réduction, puis on applique la clôture réflexive transitive de cette relation. Cependant un problème inattendu s'est posé à nous : il nous a été impossible d'utiliser directement la définiton [clos_refl_trans_n1] de la bibliothèque de Coq, et nous avons donc dû la redéfinir manuellement. *)
+(** Tout d'abord on définit une relation de réduction sur les termes du système F. Cela se fait en deux temps. D'abord on établit la définiton d'un pas de réduction, puis on applique la clôture réflexive transitive de cette relation. Cependant un problème inattendu s'est posé à nous : il nous a été impossible d'utiliser directement la définiton [clos_refl_trans_n1] de la bibliothèque de Coq, et nous avons donc dû la redéfinir manuellement. Pour une raison inconnue, quand on veut appliquer le constructeur [rtn1_refl]
+pour prouver [clos_refl_trans_n1], Coq produit une erreur d'unification. *)
 Inductive one_step_reduction : relation term :=
   |Lambda_reduction : forall K t T, 
                         one_step_reduction (AppT (Abs K t) T) (subst_typ 0 T t)
@@ -95,14 +96,16 @@ intros t1 t2 K H. induction H as [|t2 t3].
 Qed.
 (**  *)
 
-(** *)
+(** Un terme est neutre si ce n'est ni une \lambda-abstraction, ni une \Lambda-abastraction *)
 Inductive neutral : term -> Prop :=
   |var_neutral : forall x, neutral (Var x)
   |app_neutral : forall t1 t2, neutral (App t1 t2)
   |appt_neutral : forall t T, neutral (AppT t T).
 (** *)
                                      
-(** *)
+(** On définit inductivement un prédicat [normal]. Dans le cas d'un terme appliqué à
+un terme, ou d'un type appliqué à un terme, on s'assure que l'application ne
+forme pas un redex. *)
 Inductive normal : term -> Prop := 
   |var_normal : forall x, normal (Var x)
   |lam_normal : forall T t, normal t -> normal (Lam T t)

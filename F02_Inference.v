@@ -40,9 +40,9 @@ Qed.
 
 
 
-(** ** Inférence de types  *)
+(** ** Inférence de type  *)
 
-(** Un petit utilitaire: on peut décider si deux types [T] et [U] sont égaux. *)
+(** Un utilitaire: on peut décider si deux types [T] et [U] sont égaux. *)
 Lemma eq_typ_dec : forall (T U :typ), {T=U} + {T<>U}.
 (** *)
 Proof.

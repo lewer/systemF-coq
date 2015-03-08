@@ -37,7 +37,7 @@ Qed.
 (** *)
 
 
-(** De même, on montre que les type accessibles avant insertion d'une sorte le sont toujours après. *)
+(** De même, on montre que les types accessibles avant insertion d'une sorte le sont toujours après. *)
 Lemma insert_kind_get_type : forall X e e', insert_kind X e e' -> forall x, 
             get_type x e' = match nat_compare X x with
                               | Lt => option_map (tshift X) (get_type (x-1) e)

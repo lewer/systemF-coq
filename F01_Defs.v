@@ -5,16 +5,16 @@ Require Export Omega.
 Require Export Relations.
 (** * I. Définitions et premières propriétés
 
-Dans cette première partie, nous définissons les objets (environnements, termes, types et sortes) sur lesquels nous allons travailler. Nous avons choisit de représenter les lieurs avec des indices de de Bruijn, nous y définissons également les fonctions auxilliaires (shift, subst, etc.) et prouvons les lemmes de commutation nécessaires.*)
+Dans cette première partie, nous définissons les objets (environnements, termes, types et sortes) sur lesquels nous allons travailler. Nous avons choisi de représenter les lieurs avec des indices de de Bruijn, nous y définissons également les fonctions auxilliaires (shift, subst, etc.) et prouvons les lemmes de commutation nécessaires.*)
 
 
 (** ** Quelques tactiques personnalisées *)
-(** Nous avons définit quelques tactiques qui ont principalement utilisées dans le fin du développement. *)
+(** Nous avons défini quelques tactiques principalement utilisées dans la fin du développement. *)
 
 (** [inv] permet d'y voir plus clair après une inversion. C'est très pratique, l'inconvénient est que nous perdons définivement tout contrôle des noms introduits. *)
 Ltac inv H := inversion H; try subst; clear H.
 (** Dans les fonctions auxilliaires (shift, subst, etc.) nous avons souvent besoin de comparer des entiers. Après avoir essayé d'utiliser des lemmes comme [le_dec], [eq_dec_nat], ... nous avons finalement trouvé plus pratique d'utiliser des booléens. L'avantage est que les fonctions [leb] et [nat_compare] peuvent calculer (on peut simplifier certaines expressions avec [simpl]). L'inconvénient est que, lorsque l'on fait des distinctions de cas avec [destruct], les hypothèses introduites sont de la forme [leb x y = true], ce qui est difficilement utilisable (notamment par [omega]).
-La tactique [comp] tente de remédier à ce problème en réécrivant systématique les égalités de ce type. *)
+La tactique [comp] tente de remédier à ce problème en réécrivant systématiquement les égalités de ce type. *)
 Ltac comp :=
   rewrite ?leb_iff in *; rewrite ?leb_iff_conv in *;
   rewrite <- ?nat_compare_lt in *; rewrite <- ?nat_compare_gt in *; rewrite ?nat_compare_eq_iff in *.
@@ -29,7 +29,7 @@ Ltac mysimpl :=
 
 (** On définit ici les sortes ([kind]), les types ([typ]), les termes ([term]) et les environnements ([env]). *)
 (** On utilise des indices de de Bruijn pour représenter les lieurs. Les variables liées sont dénotées par des entiers indiquant le nombre de lieurs les séparant du leur (type [var]). *)
-(** Un environnement est une liste de déclarations de sortes et de types. Ces déclarations sont ordonnées dans la liste de manière à respecter les indices de de Bruijn. Suivant la suggestion du sujet, nous utilisons un seul environnement pour les déclarations de sortes et de types. Nous trouvons que c'est effectivement plus élégant : cela permet de garder trace de l'entrelacement des déclarations. Nous avons aussi choisit de n'avoir qu'une seule numérotation pour les types et les sortes (par exemple [TVar 0] pointe vers la variable en tête qui n'est pas nécessairement une variable de terme), mais nous avons un peu regretté ce choix. En effet, l'utilisation deux numérotations distinctes nous aurait permis de simplifier certains problèmes : par exemple, dans la fonction [remove_var], que faire quand l'on est censé enlever le type qui est en tête mais que c'est une sorte ? et aussi dans l'inférence de type (cf. fin de la #<a href="F01_Defs.html">#partie II#</a>#).*)
+(** Un environnement est une liste de déclarations de sortes et de types. Ces déclarations sont ordonnées dans la liste de manière à respecter les indices de de Bruijn. Suivant la suggestion du sujet, nous utilisons un seul environnement pour les déclarations de sortes et de types. Nous trouvons que c'est effectivement plus élégant : cela permet de garder trace de l'entrelacement des déclarations. Nous avons aussi choisi de n'avoir qu'une seule numérotation pour les types et les sortes (par exemple [TVar 0] pointe vers la variable en tête qui n'est pas nécessairement une variable de terme), mais nous avons regretté ce choix. En effet, l'utilisation deux numérotations distinctes nous aurait permis de simplifier certains problèmes : par exemple, dans la fonction [remove_var], que faire quand l'on est censé enlever le type qui est en tête mais que c'est une sorte ? et aussi dans l'inférence de type (cf. fin de la #<a href="F01_Defs.html">#partie II#</a>#).*)
 Definition var := nat.
 (**  *)
 Definition kind := nat.
@@ -56,7 +56,7 @@ Inductive env :=
 
 (** ** Utilitaires de substitutions *)
 
-(** En raison de l'utilisation de la notation de de Bruijn, il convient de correctement mettre à jour les indices des variables lors des différentes opérations de substitutions par des termes ou des types. *)
+(** En raison de l'utilisation de la notation de de Bruijn, il convient de correctement mettre à jour les indices des variables lors des différentes opérations de substitution par des termes ou des types. *)
 
 (** [tshift x T] incrémente les variables [>= x] dans le type [T]. *)
 Fixpoint tshift (x:var) (T:typ) {struct T} : typ :=
@@ -137,7 +137,7 @@ Fixpoint subst (x : nat) (t' : term) t {struct t} :=
 (** ** Jugements de typage *)
 (** Nous avons besoin de deux fonctions auxiliaires pour accéder à l'environnement avant de pouvoir définir les trois jugements de typage. *)
 
-(** [get_kind X e] renvoie la sorte de la variable d'indice [X] dans l'environnement [e]. Les indice d'un type dans un environnement réfèrent aux variables qui sont après lui dans cet environnement. On fait donc attention à décaler les indices pour que ceux du type que l'on renvoie réfèrent à l'environnement global. *)
+(** [get_kind X e] renvoie la sorte de la variable d'indice [X] dans l'environnement [e].*)
 Fixpoint get_kind (X:var) (e:env) : option kind :=
   match (X, e) with
     | (0, ConsK K _) => Some K
@@ -148,7 +148,7 @@ Fixpoint get_kind (X:var) (e:env) : option kind :=
 (** *)
 
 
-(** [get_type x e] renvoie le type de la variable d'indice [x] dans l'environnement [e]. *)
+(** [get_type x e] renvoie le type de la variable d'indice [x] dans l'environnement [e]. Les indices d'un type dans un environnement réfèrent aux variables qui sont après lui dans cet environnement. On fait donc attention à décaler les indices pour que ceux du type que l'on renvoie réfèrent à l'environnement global. *)
 Fixpoint get_type (x:var) (e:env) :=
   match (x, e) with
     | (0, ConsT T _) => Some (tshift 0 T)
@@ -297,7 +297,7 @@ Qed.
 
 
 (** ** Cumulativité *)
-(** Ici, nous démontrons la première propriété non triviale du système : la cumulativité. La preuve est une induction immédiate, la seule difficultée est la manipulation des [max] que [omega] ne connaît pas ...  *)
+(** Ici, nous démontrons la première propriété non triviale du système : la cumulativité. La preuve est une induction immédiate, la seule difficulté est la manipulation des [max] que [omega] ne connait pas ...  *)
 Lemma cumulativity : forall T e K1 K2, K1 <= K2 -> kinding e T K1 -> kinding e T K2.
 (** *)
 Proof.
